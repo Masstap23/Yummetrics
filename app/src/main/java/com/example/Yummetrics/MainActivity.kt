@@ -27,6 +27,30 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import java.util.Locale
+import android.content.Context
+
+fun setLocale(activity: ComponentActivity, langCode: String, restartActivity: Boolean = false) {
+    val locale = Locale(langCode)
+    Locale.setDefault(locale)
+
+    val config = activity.resources.configuration
+    config.setLocale(locale)
+
+    activity.resources.updateConfiguration(config, activity.resources.displayMetrics)
+
+    val prefs = activity.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    val current = prefs.getString("language", "en")
+
+    if (current != langCode) {
+        prefs.edit().putString("language", langCode).apply()
+
+        if (restartActivity) {
+            activity.recreate()
+        }
+    }
+}
+
 
 @Composable
 fun LanguageSelectionScreen(
@@ -81,9 +105,9 @@ fun LanguageSelectionScreen(
             )
             Spacer(modifier = Modifier.height(80.dp))
 
-            LanguageButton(text = stringResource(R.string.english)) { onLanguageSelected("en") }
-            LanguageButton(text = stringResource(R.string.russian)) { onLanguageSelected("ru") }
-            LanguageButton(text = stringResource(R.string.polish)) { onLanguageSelected("pl") }
+            LanguageButton(text = "🇬🇧 " + stringResource(R.string.english)) { onLanguageSelected("en") }
+            LanguageButton(text = "🇷🇺 " + stringResource(R.string.russian)) { onLanguageSelected("ru") }
+            LanguageButton(text = "🇵🇱 " + stringResource(R.string.polish)) { onLanguageSelected("pl") }
 
             Spacer(modifier = Modifier.height(120.dp))
 
@@ -120,12 +144,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
+        val langCode = prefs.getString("language", "en") ?: "en"
+        setLocale(this, langCode, restartActivity = false)
+
         setContent {
             TrackerControlTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     LanguageSelectionScreen(
-                        onLanguageSelected = { langCode ->
-                            // TODO: сохранить язык
+                        onLanguageSelected = { code ->
+                            setLocale(this, code, restartActivity = true)
                         },
                         onContinueClicked = {
                             // TODO: переход дальше

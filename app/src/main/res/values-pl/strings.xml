@@ -2,8 +2,8 @@
     <string name="app_name">Yummetrics</string>
     <string name="welcome_title">Witamy!</string>
     <string name="choose_language">Wybierz swój język</string>
-    <string name="english">🇬🇧English</string>
-    <string name="russian">🇷🇺Русский</string>
-    <string name="polish">🇵🇱Polski</string>
+    <string name="english">English</string>
+    <string name="russian">Русский</string>
+    <string name="polish">Polski</string>
     <string name="button_continue">Kontynuuj</string>
 </resources>

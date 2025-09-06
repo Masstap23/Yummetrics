@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">КБЖУ Трекер</string>
+    <string name="app_name">Yummetrics</string>
     <string name="welcome_message">Привет! Давай настроим твои цели питания.</string>
     <string name="button_start">Начать</string>
 </resources>

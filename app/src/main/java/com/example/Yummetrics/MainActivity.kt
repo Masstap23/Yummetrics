@@ -22,65 +22,99 @@ import androidx.compose.material3.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 
 @Composable
 fun LanguageSelectionScreen(
     onLanguageSelected: (String) -> Unit,
     onContinueClicked: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-        Text(
-            text = stringResource(R.string.welcome_title),
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold
+        Image(
+            painter = painterResource(id = R.drawable.with_sun),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = stringResource(R.string.choose_language),
-            fontSize = 16.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = { onLanguageSelected("en") },
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(stringResource(R.string.english))
-        }
+            Box(
+                modifier = Modifier
+                    .background(Color(0xFFFFC107), shape = RoundedCornerShape(8.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "KBJU Tracker",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            }
 
-        Button(
-            onClick = { onLanguageSelected("ru") },
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-        ) {
-            Text(stringResource(R.string.russian))
-        }
+            Spacer(modifier = Modifier.height(40.dp))
 
-        Button(
-            onClick = { onLanguageSelected("pl") },
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-        ) {
-            Text(stringResource(R.string.polish))
-        }
+            Text(
+                text = stringResource(R.string.welcome_title),
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF3E2723)
+            )
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        Button(
-            onClick = onContinueClicked,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(stringResource(R.string.button_continue))
+            Text(
+                text = stringResource(R.string.choose_language),
+                fontSize = 18.sp,
+                textAlign = TextAlign.Center,
+                color = Color.Black
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            LanguageButton(text = stringResource(R.string.english)) { onLanguageSelected("en") }
+            LanguageButton(text = stringResource(R.string.russian)) { onLanguageSelected("ru") }
+            LanguageButton(text = stringResource(R.string.polish)) { onLanguageSelected("pl") }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = onContinueClicked,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                Text(stringResource(R.string.button_continue), color = Color.Black)
+            }
         }
+    }
+}
+
+@Composable
+fun LanguageButton(text: String, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF3E0)), // светло-бежевый
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .height(50.dp)
+    ) {
+        Text(text, color = Color.Black)
     }
 }
 
@@ -93,10 +127,10 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     LanguageSelectionScreen(
                         onLanguageSelected = { langCode ->
-                            // TODO: здесь сохраним выбранный язык в SharedPreferences
+                            // TODO: сохранить язык
                         },
                         onContinueClicked = {
-                            // TODO: переход на следующий экран
+                            // TODO: переход дальше
                         }
                     )
                 }

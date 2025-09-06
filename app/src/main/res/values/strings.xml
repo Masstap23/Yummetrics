@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">TrackerControl</string>
+    <string name="app_name">KBJU Tracker</string>
+    <string name="welcome_message">Welcome! Let\'s set up your nutrition goals.</string>
+    <string name="button_start">Start</string>
 </resources>

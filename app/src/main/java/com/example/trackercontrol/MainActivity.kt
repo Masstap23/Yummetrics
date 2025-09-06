@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.trackercontrol.ui.theme.TrackerControlTheme
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,7 +38,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
-        text = "KBJU Tracker",
+        text = stringResource(R.string.welcome_message),
         fontSize = 24.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier

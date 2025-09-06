@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Kalkulator KBJU</string>
+    <string name="welcome_message">Cześć! Ustalmy twoje cele żywieniowe.</string>
+    <string name="button_start">Zacznij</string>
+</resources>

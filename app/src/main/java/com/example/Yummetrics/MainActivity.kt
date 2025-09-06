@@ -29,6 +29,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import java.util.Locale
 import android.content.Context
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 fun setLocale(activity: ComponentActivity, langCode: String, restartActivity: Boolean = false) {
     val locale = Locale(langCode)
@@ -54,9 +58,11 @@ fun setLocale(activity: ComponentActivity, langCode: String, restartActivity: Bo
 
 @Composable
 fun LanguageSelectionScreen(
+    selectedLangCode: String,
     onLanguageSelected: (String) -> Unit,
     onContinueClicked: () -> Unit
 ) {
+    var selectedLang by remember { mutableStateOf(selectedLangCode) }
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -105,9 +111,29 @@ fun LanguageSelectionScreen(
             )
             Spacer(modifier = Modifier.height(80.dp))
 
-            LanguageButton(text = "🇬🇧 " + stringResource(R.string.english)) { onLanguageSelected("en") }
-            LanguageButton(text = "🇷🇺 " + stringResource(R.string.russian)) { onLanguageSelected("ru") }
-            LanguageButton(text = "🇵🇱 " + stringResource(R.string.polish)) { onLanguageSelected("pl") }
+            LanguageButton(
+                text = "🇬🇧 " + stringResource(R.string.english),
+                isSelected = selectedLang == "en"
+            ) {
+                selectedLang = "en"
+                onLanguageSelected("en")
+            }
+
+            LanguageButton(
+                text = "🇷🇺 " + stringResource(R.string.russian),
+                isSelected = selectedLang == "ru"
+            ) {
+                selectedLang = "ru"
+                onLanguageSelected("ru")
+            }
+
+            LanguageButton(
+                text = "🇵🇱 " + stringResource(R.string.polish),
+                isSelected = selectedLang == "pl"
+            ) {
+                selectedLang = "pl"
+                onLanguageSelected("pl")
+            }
 
             Spacer(modifier = Modifier.height(120.dp))
 
@@ -125,20 +151,28 @@ fun LanguageSelectionScreen(
     }
 }
 
-    @Composable
-fun LanguageButton(text: String, onClick: () -> Unit) {
+@Composable
+fun LanguageButton(text: String, isSelected: Boolean = false, onClick: () -> Unit) {
+    val backgroundColor = if (isSelected) Color(0xFF64B5F6) else Color(0xFFFFF3E0)
+
     Button(
         onClick = onClick,
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF3E0)), // светло-бежевый
+        colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .height(55.dp)
     ) {
-        Text(text, color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Medium)
+        Text(
+            text,
+            color = Color.Black,
+            fontSize = 22.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+        )
     }
 }
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -153,12 +187,9 @@ class MainActivity : ComponentActivity() {
             TrackerControlTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     LanguageSelectionScreen(
-                        onLanguageSelected = { code ->
-                            setLocale(this, code, restartActivity = true)
-                        },
-                        onContinueClicked = {
-                            // TODO: переход дальше
-                        }
+                        selectedLangCode = langCode,
+                        onLanguageSelected = { code -> setLocale(this, code, restartActivity = true) },
+                        onContinueClicked = {  }
                     )
                 }
             }

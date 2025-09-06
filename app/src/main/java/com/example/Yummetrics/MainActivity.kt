@@ -21,34 +21,65 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 
 @Composable
-fun WelcomeScreen(onContinueClicked: () -> Unit) {
+fun LanguageSelectionScreen(
+    onLanguageSelected: (String) -> Unit,
+    onContinueClicked: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = stringResource(R.string.app_name),
-            fontSize = 28.sp,
+            text = stringResource(R.string.welcome_title),
+            fontSize = 32.sp,
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = stringResource(R.string.welcome_message),
-            fontSize = 18.sp,
+            text = stringResource(R.string.choose_language),
+            fontSize = 16.sp,
             textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Button(onClick = onContinueClicked) {
-            Text(text = stringResource(R.string.button_start))
+        Button(
+            onClick = { onLanguageSelected("en") },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+        ) {
+            Text(stringResource(R.string.english))
+        }
+
+        Button(
+            onClick = { onLanguageSelected("ru") },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+        ) {
+            Text(stringResource(R.string.russian))
+        }
+
+        Button(
+            onClick = { onLanguageSelected("pl") },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+        ) {
+            Text(stringResource(R.string.polish))
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = onContinueClicked,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.button_continue))
         }
     }
 }
@@ -60,9 +91,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             TrackerControlTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    WelcomeScreen(
-                        onContinueClicked={
-                            //
+                    LanguageSelectionScreen(
+                        onLanguageSelected = { langCode ->
+                            // TODO: здесь сохраним выбранный язык в SharedPreferences
+                        },
+                        onContinueClicked = {
+                            // TODO: переход на следующий экран
                         }
                     )
                 }

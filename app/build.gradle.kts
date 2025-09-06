@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.trackercontrol"
+    namespace = "com.example.Yummetrics"
     compileSdk = 36
 
     defaultConfig {

@@ -1,4 +1,4 @@
-package com.example.trackercontrol
+package com.example.Yummetrics
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -14,7 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.trackercontrol.ui.theme.TrackerControlTheme
+import com.example.Yummetrics.ui.theme.TrackerControlTheme
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 

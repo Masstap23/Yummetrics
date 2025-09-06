@@ -1,4 +1,4 @@
-package com.example.trackercontrol.ui.theme
+package com.example.Yummetrics.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">Yummetrics</string>
-    <string name="welcome_message">Привет! Давай настроим твои цели питания.</string>
-    <string name="button_start">Начать</string>
+    <string name="welcome_title">Добро пожаловать!</string>
+    <string name="choose_language">Выберите свой язык</string>
+    <string name="english">🇬🇧English</string>
+    <string name="russian">🇷🇺Русский</string>
+    <string name="polish">🇵🇱Polski</string>
+    <string name="button_continue">Продолжить</string>
 </resources>

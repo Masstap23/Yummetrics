@@ -43,6 +43,21 @@ fun LanguageSelectionScreen(
             contentScale = ContentScale.Crop
         )
 
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 20.dp, top = 120.dp)
+                .background(Color(0xFFFFC107), shape = RoundedCornerShape(8.dp))
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = "Yummetrics",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -50,44 +65,27 @@ fun LanguageSelectionScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .background(Color(0xFFFFC107), shape = RoundedCornerShape(8.dp))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "KBJU Tracker",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
-
+            Spacer(modifier = Modifier.height(120.dp))
             Text(
                 text = stringResource(R.string.welcome_title),
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF3E2723)
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = stringResource(R.string.choose_language),
-                fontSize = 18.sp,
-                textAlign = TextAlign.Center,
-                color = Color.Black
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Black,
+                modifier = Modifier.padding(top = 24.dp, bottom = 16.dp)
             )
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(80.dp))
 
             LanguageButton(text = stringResource(R.string.english)) { onLanguageSelected("en") }
             LanguageButton(text = stringResource(R.string.russian)) { onLanguageSelected("ru") }
             LanguageButton(text = stringResource(R.string.polish)) { onLanguageSelected("pl") }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(120.dp))
 
             Button(
                 onClick = onContinueClicked,
@@ -97,13 +95,13 @@ fun LanguageSelectionScreen(
                     .fillMaxWidth()
                     .height(50.dp)
             ) {
-                Text(stringResource(R.string.button_continue), color = Color.Black)
+                Text(stringResource(R.string.button_continue), color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
-@Composable
+    @Composable
 fun LanguageButton(text: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
@@ -112,9 +110,9 @@ fun LanguageButton(text: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .height(50.dp)
+            .height(55.dp)
     ) {
-        Text(text, color = Color.Black)
+        Text(text, color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Medium)
     }
 }
 

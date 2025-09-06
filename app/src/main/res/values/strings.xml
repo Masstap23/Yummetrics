@@ -1,11 +1,11 @@
 <resources>
     <string name="app_name">Yummetrics</string>
-    <string name="welcome_title">Welcome! Let\'s set up your nutrition goals.</string>
-    <string name="welcome_message">Welcome! Let\'s set up your nutrition goals.</string>
-    <string name="button_continue">Start</string>
+    <string name="welcome_title">Welcome!</string>
+    <string name="welcome_message">Welcome!</string>
+    <string name="button_continue">Continue</string>
     <string name="choose_language">Please select your language.</string>
-    <string name="english">English</string>
-    <string name="russian">Русский</string>
-    <string name="polish">Polski</string>
+    <string name="english">🇬🇧English</string>
+    <string name="russian">🇷🇺Русский</string>
+    <string name="polish">🇵🇱Polski</string>
     <string name="Button_continue">Continue</string>
 </resources>

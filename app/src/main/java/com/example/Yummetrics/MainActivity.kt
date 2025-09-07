@@ -265,8 +265,12 @@ fun NameInputScreen(onNameEntered: (String) -> Unit) {
                 )
             }
             BottomContinueButton(
-                enabled = name.isNotBlank(),
-                onClick = { onNameEntered(name) }
+                enabled = true,
+                onClick = {
+                    if (name.isNotBlank()) {
+                        onNameEntered(name)
+                    }
+                }
             )
         }
     }

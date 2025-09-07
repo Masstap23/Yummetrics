@@ -55,6 +55,19 @@ fun setLocale(activity: ComponentActivity, langCode: String, restartActivity: Bo
     }
 }
 
+data class UserData(
+    val name: String = "",
+    val gender: String = "",
+    val age: Int = 0,
+    val height: Int = 0,
+    val weight: Int = 0,
+    val activityLevel: String = "",
+    val goal: String = "",
+    val dailyCalories: Int = 0,
+    val dailyProteins: Int = 0,
+    val dailyFats: Int = 0,
+    val dailyCarbs: Int = 0
+)
 
 @Composable
 fun LanguageSelectionScreen(

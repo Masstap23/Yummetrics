@@ -8,4 +8,7 @@
     <string name="russian">Русский</string>
     <string name="polish">Polski</string>
     <string name="Button_continue">Continue</string>
+    <string name="ask_name">How can I call you?</string>
+    <string name="name_hint">Name</string>
+    <string name="button_next">Continue</string>
 </resources>

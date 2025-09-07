@@ -6,4 +6,7 @@
     <string name="russian">Русский</string>
     <string name="polish">Polski</string>
     <string name="button_continue">Продолжить</string>
+    <string name="ask_name">Как я могу к тебе обращаться?</string>
+    <string name="name_hint">Имя</string>
+    <string name="button_next">Продолжить</string>
 </resources>

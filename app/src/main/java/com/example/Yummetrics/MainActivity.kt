@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 
 fun setLocale(activity: ComponentActivity, langCode: String, restartActivity: Boolean = false) {
     val locale = Locale(langCode)
@@ -107,14 +107,25 @@ object UserStorage {
     }
 }
 
+@Composable
+fun AppHeader(text: String = "Yummetrics", modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .background(Color(0xFFFFC107), shape = RoundedCornerShape(8.dp))
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+    }
+}
+
 
 @Composable
-fun LanguageSelectionScreen(
-    selectedLangCode: String,
-    onLanguageSelected: (String) -> Unit,
-    onContinueClicked: () -> Unit
-) {
-    var selectedLang by remember { mutableStateOf(selectedLangCode) }
+fun BackgroundScreen(content: @Composable BoxScope.() -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -125,79 +136,93 @@ fun LanguageSelectionScreen(
             contentScale = ContentScale.Crop
         )
 
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 20.dp, top = 120.dp)
-                .background(Color(0xFFFFC107), shape = RoundedCornerShape(8.dp))
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = "Yummetrics",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-        }
+        content()
+    }
+}
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Spacer(modifier = Modifier.height(120.dp))
-            Text(
-                text = stringResource(R.string.welcome_title),
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF3E2723)
-            )
-            Text(
-                text = stringResource(R.string.choose_language),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black,
-                modifier = Modifier.padding(top = 24.dp, bottom = 16.dp)
-            )
-            Spacer(modifier = Modifier.height(80.dp))
+@Composable
+fun LanguageSelectionScreen(
+    selectedLangCode: String,
+    onLanguageSelected: (String) -> Unit,
+    onContinueClicked: () -> Unit
+) {
+    var selectedLang by remember { mutableStateOf(selectedLangCode) }
 
-            LanguageButton(
-                text = "🇬🇧 " + stringResource(R.string.english),
-                isSelected = selectedLang == "en"
-            ) {
-                selectedLang = "en"
-                onLanguageSelected("en")
-            }
-
-            LanguageButton(
-                text = "🇷🇺 " + stringResource(R.string.russian),
-                isSelected = selectedLang == "ru"
-            ) {
-                selectedLang = "ru"
-                onLanguageSelected("ru")
-            }
-
-            LanguageButton(
-                text = "🇵🇱 " + stringResource(R.string.polish),
-                isSelected = selectedLang == "pl"
-            ) {
-                selectedLang = "pl"
-                onLanguageSelected("pl")
-            }
-
-            Spacer(modifier = Modifier.height(120.dp))
-
-            Button(
-                onClick = onContinueClicked,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
-                shape = RoundedCornerShape(12.dp),
+    BackgroundScreen {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AppHeader(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
+                    .align(Alignment.TopStart)
+                    .padding(start = 20.dp, top = 120.dp)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Text(stringResource(R.string.button_continue), color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(120.dp))
+
+                Text(
+                    text = stringResource(R.string.welcome_title),
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723)
+                )
+
+                Text(
+                    text = stringResource(R.string.choose_language),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Black,
+                    modifier = Modifier.padding(top = 24.dp, bottom = 16.dp)
+                )
+
+                Spacer(modifier = Modifier.height(80.dp))
+
+                LanguageButton(
+                    text = "🇬🇧 " + stringResource(R.string.english),
+                    isSelected = selectedLang == "en"
+                ) {
+                    selectedLang = "en"
+                    onLanguageSelected("en")
+                }
+
+                LanguageButton(
+                    text = "🇷🇺 " + stringResource(R.string.russian),
+                    isSelected = selectedLang == "ru"
+                ) {
+                    selectedLang = "ru"
+                    onLanguageSelected("ru")
+                }
+
+                LanguageButton(
+                    text = "🇵🇱 " + stringResource(R.string.polish),
+                    isSelected = selectedLang == "pl"
+                ) {
+                    selectedLang = "pl"
+                    onLanguageSelected("pl")
+                }
+
+                Spacer(modifier = Modifier.height(120.dp))
+
+                Button(
+                    onClick = onContinueClicked,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.button_continue),
+                        color = Color.Black,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
@@ -207,45 +232,60 @@ fun LanguageSelectionScreen(
 fun NameInputScreen(onNameEntered: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
 
-    Box(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(R.string.ask_name),
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF3E2723)
+    BackgroundScreen {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AppHeader(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 20.dp, top = 120.dp)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text(stringResource(R.string.name_hint)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Button(
-                onClick = { if (name.isNotBlank()) onNameEntered(name) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().height(55.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    stringResource(R.string.button_next),
-                    fontSize = 20.sp,
-                    color = Color.Black
+                    text = stringResource(R.string.ask_name),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723)
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.name_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = { if (name.isNotBlank()) onNameEntered(name) },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(55.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.button_next),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                }
             }
         }
     }
 }
+
 
 @Composable
 fun LanguageButton(text: String, isSelected: Boolean = false, onClick: () -> Unit) {

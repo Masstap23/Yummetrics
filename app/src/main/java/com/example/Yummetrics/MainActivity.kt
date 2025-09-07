@@ -204,6 +204,50 @@ fun LanguageSelectionScreen(
 }
 
 @Composable
+fun NameInputScreen(onNameEntered: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+
+    Box(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = stringResource(R.string.ask_name),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF3E2723)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.name_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = { if (name.isNotBlank()) onNameEntered(name) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().height(55.dp)
+            ) {
+                Text(
+                    stringResource(R.string.button_next),
+                    fontSize = 20.sp,
+                    color = Color.Black
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun LanguageButton(text: String, isSelected: Boolean = false, onClick: () -> Unit) {
     val backgroundColor = if (isSelected) Color(0xFF64B5F6) else Color(0xFFFFF3E0)
 

@@ -281,11 +281,25 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             TrackerControlTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    LanguageSelectionScreen(
+                var currentScreen by remember { mutableStateOf("language") } // ✅ вот тут создаём состояние
+
+                when (currentScreen) {
+                    "language" -> LanguageSelectionScreen(
                         selectedLangCode = langCode,
-                        onLanguageSelected = { code -> setLocale(this, code, restartActivity = true) },
-                        onContinueClicked = {  }
+                        onLanguageSelected = { code ->
+                            setLocale(this, code, restartActivity = true)
+                        },
+                        onContinueClicked = {
+                            currentScreen = "name"
+                        }
+                    )
+                    "name" -> NameInputScreen(
+                        onNameEntered = { name ->
+                            val user = UserStorage.loadUser(this).copy(name = name)
+                            UserStorage.saveUser(this, user)
+
+                            currentScreen = "kbju"
+                        }
                     )
                 }
             }

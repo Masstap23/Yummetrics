@@ -9,5 +9,14 @@
     <string name="ask_name">Jak mogę się do Ciebie zwracać?</string>
     <string name="name_hint">Imię</string>
     <string name="button_next">Kontynuuj</string>
-
+    <string name="hello_name">Cześć, %1$s</string>
+    <string name="kbju_question">Czy znasz swoje dzienne KBJU (kalorie, białka, tłuszcze, węglowodany)?</string>
+    <string name="kbju_yes_enter">Tak, wprowadzić wartości</string>
+    <string name="kbju_no_calculate">Nie, oblicz za mnie</string>
+    <string name="kbju_title">Wprowadź swoje dzienne KBJU</string>
+    <string name="calories_kcal">Kalorie (kcal)</string>
+    <string name="proteins_g">Białka (g)</string>
+    <string name="fats_g">Tłuszcze (g)</string>
+    <string name="carbs_g">Węglowodany (g)</string>
+    <string name="button_finish">Zakończ</string>
 </resources>

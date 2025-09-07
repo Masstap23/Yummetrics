@@ -9,4 +9,14 @@
     <string name="ask_name">Как я могу к тебе обращаться?</string>
     <string name="name_hint">Имя</string>
     <string name="button_next">Продолжить</string>
+    <string name="hello_name">Привет, %1$s</string>
+    <string name="kbju_question">Знаешь ли ты свой дневной КБЖУ (калории, белки, жиры, углеводы)?</string>
+    <string name="kbju_yes_enter">Да, ввести значения</string>
+    <string name="kbju_no_calculate">Нет, рассчитать для меня</string>
+    <string name="kbju_title">Введите ваши дневные КБЖУ</string>
+    <string name="calories_kcal">Калории (ккал)</string>
+    <string name="proteins_g">Белки (г)</string>
+    <string name="fats_g">Жиры (г)</string>
+    <string name="carbs_g">Углеводы (г)</string>
+    <string name="button_finish">Закончить</string>
 </resources>

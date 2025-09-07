@@ -9,7 +9,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -134,16 +138,14 @@ fun BoxScope.BottomContinueButton(
     label: String? = null
 ) {
     val text = label ?: stringResource(R.string.button_continue)
-    ElevatedButton(
+    Button(
         onClick = onClick,
         enabled = enabled,
-        colors = ButtonDefaults.elevatedButtonColors(
+        colors = ButtonDefaults.buttonColors(
             containerColor = Color(0xFFFFC107),
-            contentColor = Color.Black,
-            disabledContainerColor = Color(0xFFFFC107).copy(alpha = 0.85f),
-            disabledContentColor = Color.Black.copy(alpha = 0.6f)
+            disabledContainerColor = Color(0xFFFFE082),
+            disabledContentColor = Color(0xFF616161)
         ),
-        elevation = ButtonDefaults.elevatedButtonElevation(defaultElevation = 8.dp, pressedElevation = 10.dp, disabledElevation = 0.dp),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .align(Alignment.BottomCenter)
@@ -271,10 +273,151 @@ fun NameInputScreen(onNameEntered: (String) -> Unit) {
 }
 
 @Composable
-fun LanguageButton(text: String, isSelected: Boolean = false, onClick: () -> Unit) {
+fun KbjuQuestionScreen(
+    name: String,
+    onYesEnter: () -> Unit,
+    onNoCalculate: () -> Unit
+) {
+    BackgroundScreen {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AppHeader(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 20.dp, top = 120.dp)
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .padding(bottom = BottomContinueReservedSpace),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Spacer(modifier = Modifier.height(40.dp))
+                Text(
+                    text = stringResource(R.string.hello_name, name.ifBlank { "User" }),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.kbju_question),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Black
+                )
+                Spacer(modifier = Modifier.height(40.dp))
+                LanguageButton(
+                    text = stringResource(R.string.kbju_yes_enter),
+                    isSelected = false
+                ) { onYesEnter() }
+                LanguageButton(
+                    text = stringResource(R.string.kbju_no_calculate),
+                    isSelected = false,
+                    enabled = false
+                ) { onNoCalculate() }
+            }
+        }
+    }
+}
+
+@Composable
+fun KbjuInputScreen(
+    initialCalories: Int,
+    initialProteins: Int,
+    initialFats: Int,
+    initialCarbs: Int,
+    onFinish: (cal: Int, p: Int, f: Int, c: Int) -> Unit
+) {
+    var calories by remember { mutableStateOf(if (initialCalories > 0) initialCalories.toString() else "") }
+    var proteins by remember { mutableStateOf(if (initialProteins > 0) initialProteins.toString() else "") }
+    var fats by remember { mutableStateOf(if (initialFats > 0) initialFats.toString() else "") }
+    var carbs by remember { mutableStateOf(if (initialCarbs > 0) initialCarbs.toString() else "") }
+
+    val onlyDigits: (String) -> String = { it.filter { ch -> ch.isDigit() } }
+    val valid = calories.isNotBlank() && proteins.isNotBlank() && fats.isNotBlank() && carbs.isNotBlank()
+
+    BackgroundScreen {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AppHeader(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 20.dp, top = 120.dp)
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .padding(bottom = BottomContinueReservedSpace),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.kbju_title),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                OutlinedTextField(
+                    value = calories,
+                    onValueChange = { calories = onlyDigits(it) },
+                    label = { Text(stringResource(R.string.calories_kcal)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = proteins,
+                    onValueChange = { proteins = onlyDigits(it) },
+                    label = { Text(stringResource(R.string.proteins_g)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = fats,
+                    onValueChange = { fats = onlyDigits(it) },
+                    label = { Text(stringResource(R.string.fats_g)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = carbs,
+                    onValueChange = { carbs = onlyDigits(it) },
+                    label = { Text(stringResource(R.string.carbs_g)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            BottomContinueButton(
+                enabled = valid,
+                onClick = {
+                    val cal = calories.toIntOrNull() ?: 0
+                    val p = proteins.toIntOrNull() ?: 0
+                    val f = fats.toIntOrNull() ?: 0
+                    val c = carbs.toIntOrNull() ?: 0
+                    onFinish(cal, p, f, c)
+                },
+                label = stringResource(R.string.button_finish)
+            )
+        }
+    }
+}
+
+@Composable
+fun LanguageButton(
+    text: String,
+    isSelected: Boolean = false,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
     val backgroundColor = if (isSelected) Color(0xFF64B5F6) else Color(0xFFFFF3E0)
     Button(
         onClick = onClick,
+        enabled = enabled,
         colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
@@ -301,6 +444,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             TrackerControlTheme {
                 var currentScreen by remember { mutableStateOf("language") }
+                val ctx = LocalContext.current
                 when (currentScreen) {
                     "language" -> LanguageSelectionScreen(
                         selectedLangCode = langCode,
@@ -315,9 +459,39 @@ class MainActivity : ComponentActivity() {
                         onNameEntered = { name ->
                             val user = UserStorage.loadUser(this).copy(name = name)
                             UserStorage.saveUser(this, user)
-                            currentScreen = "kbju"
+                            currentScreen = "kbjuQuestion"
                         }
                     )
+                    "kbjuQuestion" -> {
+                        val user = UserStorage.loadUser(this)
+                        KbjuQuestionScreen(
+                            name = user.name,
+                            onYesEnter = { currentScreen = "kbjuInput" },
+                            onNoCalculate = { }
+                        )
+                    }
+                    "kbjuInput" -> {
+                        val user = UserStorage.loadUser(this)
+                        KbjuInputScreen(
+                            initialCalories = user.dailyCalories,
+                            initialProteins = user.dailyProteins,
+                            initialFats = user.dailyFats,
+                            initialCarbs = user.dailyCarbs
+                        ) { cal, p, f, c ->
+                            val updated = user.copy(
+                                dailyCalories = cal,
+                                dailyProteins = p,
+                                dailyFats = f,
+                                dailyCarbs = c
+                            )
+                            UserStorage.saveUser(ctx, updated)
+                            currentScreen = "done"
+                        }
+                    }
+                    "done" -> {
+                        val user = UserStorage.loadUser(this)
+                        Greeting(user.name)
+                    }
                 }
             }
         }

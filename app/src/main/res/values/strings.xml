@@ -11,4 +11,14 @@
     <string name="ask_name">How can I call you?</string>
     <string name="name_hint">Name</string>
     <string name="button_next">Continue</string>
+    <string name="hello_name">Hi, %1$s</string>
+    <string name="kbju_question">Do you know your daily KBJU (calories, proteins, fats, carbs)?</string>
+    <string name="kbju_yes_enter">Yes, enter values</string>
+    <string name="kbju_no_calculate">No, calculate for me</string>
+    <string name="kbju_title">Enter your daily KBJU</string>
+    <string name="calories_kcal">Calories (kcal)</string>
+    <string name="proteins_g">Proteins (g)</string>
+    <string name="fats_g">Fats (g)</string>
+    <string name="carbs_g">Carbs (g)</string>
+    <string name="button_finish">Finish</string>
 </resources>

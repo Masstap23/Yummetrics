@@ -69,6 +69,45 @@ data class UserData(
     val dailyCarbs: Int = 0
 )
 
+object UserStorage {
+    private const val PREFS_NAME = "user_prefs"
+
+    fun saveUser(context: Context, user: UserData) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("name", user.name)
+            .putString("gender", user.gender)
+            .putInt("age", user.age)
+            .putInt("height", user.height)
+            .putInt("weight", user.weight)
+            .putString("activityLevel", user.activityLevel)
+            .putString("goal", user.goal)
+            .putInt("dailyCalories", user.dailyCalories)
+            .putInt("dailyProteins", user.dailyProteins)
+            .putInt("dailyFats", user.dailyFats)
+            .putInt("dailyCarbs", user.dailyCarbs)
+            .apply()
+    }
+
+    fun loadUser(context: Context): UserData {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return UserData(
+            name = prefs.getString("name", "") ?: "",
+            gender = prefs.getString("gender", "") ?: "",
+            age = prefs.getInt("age", 0),
+            height = prefs.getInt("height", 0),
+            weight = prefs.getInt("weight", 0),
+            activityLevel = prefs.getString("activityLevel", "") ?: "",
+            goal = prefs.getString("goal", "") ?: "",
+            dailyCalories = prefs.getInt("dailyCalories", 0),
+            dailyProteins = prefs.getInt("dailyProteins", 0),
+            dailyFats = prefs.getInt("dailyFats", 0),
+            dailyCarbs = prefs.getInt("dailyCarbs", 0)
+        )
+    }
+}
+
+
 @Composable
 fun LanguageSelectionScreen(
     selectedLangCode: String,

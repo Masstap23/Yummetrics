@@ -634,6 +634,7 @@ fun ActivitySelectScreen(selected: String, onSelect: (String) -> Unit, onContinu
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                Spacer(Modifier.height(120.dp))
                 Text(
                     text = stringResource(R.string.select_activity_title),
                     fontSize = 24.sp,
@@ -671,6 +672,7 @@ fun ActivitySelectScreen(selected: String, onSelect: (String) -> Unit, onContinu
         }
     }
 }
+
 
 @Composable
 fun GoalSelectScreen(selected: String, onSelect: (String) -> Unit, onContinue: () -> Unit) {

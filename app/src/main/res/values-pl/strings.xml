@@ -19,4 +19,36 @@
     <string name="fats_g">Tłuszcze (g)</string>
     <string name="carbs_g">Węglowodany (g)</string>
     <string name="button_finish">Zakończ</string>
+    <string name="activity_sedentary_hint">Brak ćwiczeń</string>
+    <string name="activity_light_hint">1–3 lekkie treningi w tygodniu</string>
+    <string name="activity_moderate_hint">3–5 treningów w tygodniu</string>
+    <string name="activity_active_hint">6–7 treningów/tydz. lub praca fizyczna</string>
+    <string name="activity_very_active_hint">Ciężkie treningi + praca fizyczna</string>
+    <string name="button_thanks">Dziękuję!</string>
+    <string name="select_gender_title">Wybierz płeć</string>
+    <string name="gender_male">Mężczyzna</string>
+    <string name="gender_female">Kobieta</string>
+
+    <string name="enter_age_title">Podaj swój wiek</string>
+    <string name="age_years">Wiek (lat)</string>
+
+    <string name="enter_weight_title">Podaj swoją masę</string>
+    <string name="weight_kg">Waga (kg)</string>
+
+    <string name="enter_height_title">Podaj swój wzrost</string>
+    <string name="height_cm">Wzrost (cm)</string>
+
+    <string name="select_activity_title">Poziom aktywności</string>
+    <string name="activity_sedentary">Siedzący</string>
+    <string name="activity_light">Lekki</string>
+    <string name="activity_moderate">Umiarkowany</string>
+    <string name="activity_active">Wysoki</string>
+    <string name="activity_very_active">Bardzo wysoki</string>
+
+    <string name="select_goal_title">Cel</string>
+    <string name="goal_lose">Redukcja</string>
+    <string name="goal_maintain">Utrzymanie</string>
+    <string name="goal_gain">Masa</string>
+
+    <string name="kbju_result_title">Twoje dzienne KBJU</string>
 </resources>

@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -31,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.Yummetrics.ui.theme.TrackerControlTheme
 import java.util.Locale
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 fun setLocale(activity: ComponentActivity, langCode: String, restartActivity: Boolean = false) {
     val locale = Locale(langCode)
@@ -42,9 +45,7 @@ fun setLocale(activity: ComponentActivity, langCode: String, restartActivity: Bo
     val current = prefs.getString("language", "en")
     if (current != langCode) {
         prefs.edit().putString("language", langCode).apply()
-        if (restartActivity) {
-            activity.recreate()
-        }
+        if (restartActivity) activity.recreate()
     }
 }
 
@@ -105,20 +106,13 @@ fun AppHeader(text: String = "Yummetrics", modifier: Modifier = Modifier) {
             .background(Color(0xFFFFC107), shape = RoundedCornerShape(8.dp))
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Text(
-            text = text,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
+        Text(text = text, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
     }
 }
 
 @Composable
 fun BackgroundScreen(content: @Composable BoxScope.() -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.with_sun),
             contentDescription = null,
@@ -155,12 +149,7 @@ fun BoxScope.BottomContinueButton(
             .fillMaxWidth()
             .height(55.dp)
     ) {
-        Text(
-            text = text,
-            color = Color.Black,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Text(text = text, color = Color.Black, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -204,29 +193,17 @@ fun LanguageSelectionScreen(
                 LanguageButton(
                     text = "🇬🇧 " + stringResource(R.string.english),
                     isSelected = selectedLang == "en"
-                ) {
-                    selectedLang = "en"
-                    onLanguageSelected("en")
-                }
+                ) { selectedLang = "en"; onLanguageSelected("en") }
                 LanguageButton(
                     text = "🇷🇺 " + stringResource(R.string.russian),
                     isSelected = selectedLang == "ru"
-                ) {
-                    selectedLang = "ru"
-                    onLanguageSelected("ru")
-                }
+                ) { selectedLang = "ru"; onLanguageSelected("ru") }
                 LanguageButton(
                     text = "🇵🇱 " + stringResource(R.string.polish),
                     isSelected = selectedLang == "pl"
-                ) {
-                    selectedLang = "pl"
-                    onLanguageSelected("pl")
-                }
+                ) { selectedLang = "pl"; onLanguageSelected("pl") }
             }
-            BottomContinueButton(
-                enabled = true,
-                onClick = onContinueClicked
-            )
+            BottomContinueButton(enabled = true, onClick = onContinueClicked)
         }
     }
 }
@@ -266,11 +243,7 @@ fun NameInputScreen(onNameEntered: (String) -> Unit) {
             }
             BottomContinueButton(
                 enabled = true,
-                onClick = {
-                    if (name.isNotBlank()) {
-                        onNameEntered(name)
-                    }
-                }
+                onClick = { if (name.isNotBlank()) onNameEntered(name) }
             )
         }
     }
@@ -312,15 +285,8 @@ fun KbjuQuestionScreen(
                     color = Color.Black
                 )
                 Spacer(modifier = Modifier.height(40.dp))
-                LanguageButton(
-                    text = stringResource(R.string.kbju_yes_enter),
-                    isSelected = false
-                ) { onYesEnter() }
-                LanguageButton(
-                    text = stringResource(R.string.kbju_no_calculate),
-                    isSelected = false,
-                    enabled = false
-                ) { onNoCalculate() }
+                LanguageButton(text = stringResource(R.string.kbju_yes_enter)) { onYesEnter() }
+                LanguageButton(text = stringResource(R.string.kbju_no_calculate)) { onNoCalculate() }
             }
         }
     }
@@ -411,6 +377,380 @@ fun KbjuInputScreen(
     }
 }
 
+/* ====== СЦЕНАРИЙ «НЕТ, РАССЧИТАЙ ДЛЯ МЕНЯ» ====== */
+
+data class CalcInput(
+    var gender: String = "",
+    var age: Int = 0,
+    var weight: Int = 0,
+    var height: Int = 0,
+    var activity: String = "",
+    var goal: String = ""
+)
+
+data class Kbju(val calories: Int, val proteins: Int, val fats: Int, val carbs: Int)
+
+private fun calculateKbjuPlan(
+    gender: String,
+    age: Int,
+    height: Int,
+    weight: Int,
+    activity: String,
+    goal: String
+): Kbju {
+    val bmr = if (gender == "male")
+        10 * weight + 6.25 * height - 5 * age + 5
+    else
+        10 * weight + 6.25 * height - 5 * age - 161
+
+    val activityFactor = when (activity) {
+        "sedentary" -> 1.2
+        "light" -> 1.375
+        "moderate" -> 1.55
+        "active" -> 1.725
+        "very_active" -> 1.9
+        else -> 1.2
+    }
+
+    val goalFactor = when (goal) {
+        "lose" -> 0.85
+        "gain" -> 1.15
+        else -> 1.0
+    }
+
+    val targetCalories = (bmr * activityFactor * goalFactor).roundToInt()
+
+    val proteinG = max((1.8 * weight).roundToInt(), 1)
+    val fatG = max((0.9 * weight).roundToInt(), 1)
+    val carbsG = max(((targetCalories - proteinG * 4 - fatG * 9) / 4.0).roundToInt(), 0)
+
+    return Kbju(targetCalories, proteinG, fatG, carbsG)
+}
+
+@Composable
+fun GenderSelectScreen(selected: String, onSelect: (String) -> Unit, onContinue: () -> Unit) {
+    BackgroundScreen {
+        Box(Modifier.fillMaxSize()) {
+            AppHeader(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 20.dp, top = 120.dp)
+            )
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .padding(bottom = BottomContinueReservedSpace),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.select_gender_title),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723)
+                )
+                Spacer(Modifier.height(24.dp))
+                LanguageButton(
+                    text = stringResource(R.string.gender_male),
+                    isSelected = selected == "male"
+                ) { onSelect("male") }
+                LanguageButton(
+                    text = stringResource(R.string.gender_female),
+                    isSelected = selected == "female"
+                ) { onSelect("female") }
+            }
+            BottomContinueButton(enabled = true, onClick = { if (selected.isNotBlank()) onContinue() })
+        }
+    }
+}
+
+@Composable
+fun AgeInputScreen(ageText: String, onChange: (String) -> Unit, onContinue: () -> Unit) {
+    val onlyDigits: (String) -> String = { it.filter { ch -> ch.isDigit() } }
+    BackgroundScreen {
+        Box(Modifier.fillMaxSize()) {
+            AppHeader(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 20.dp, top = 120.dp)
+            )
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .padding(bottom = BottomContinueReservedSpace),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.enter_age_title),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723)
+                )
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = ageText,
+                    onValueChange = { onChange(onlyDigits(it)) },
+                    label = { Text(stringResource(R.string.age_years)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            BottomContinueButton(enabled = true, onClick = { if (ageText.isNotBlank()) onContinue() })
+        }
+    }
+}
+
+@Composable
+fun WeightInputScreen(weightText: String, onChange: (String) -> Unit, onContinue: () -> Unit) {
+    val onlyDigits: (String) -> String = { it.filter { ch -> ch.isDigit() } }
+    BackgroundScreen {
+        Box(Modifier.fillMaxSize()) {
+            AppHeader(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 20.dp, top = 120.dp)
+            )
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .padding(bottom = BottomContinueReservedSpace),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.enter_weight_title),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723)
+                )
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = weightText,
+                    onValueChange = { onChange(onlyDigits(it)) },
+                    label = { Text(stringResource(R.string.weight_kg)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            BottomContinueButton(enabled = true, onClick = { if (weightText.isNotBlank()) onContinue() })
+        }
+    }
+}
+
+@Composable
+fun HeightInputScreen(heightText: String, onChange: (String) -> Unit, onContinue: () -> Unit) {
+    val onlyDigits: (String) -> String = { it.filter { ch -> ch.isDigit() } }
+    BackgroundScreen {
+        Box(Modifier.fillMaxSize()) {
+            AppHeader(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 20.dp, top = 120.dp)
+            )
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .padding(bottom = BottomContinueReservedSpace),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.enter_height_title),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723)
+                )
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = heightText,
+                    onValueChange = { onChange(onlyDigits(it)) },
+                    label = { Text(stringResource(R.string.height_cm)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            BottomContinueButton(enabled = true, onClick = { if (heightText.isNotBlank()) onContinue() })
+        }
+    }
+}
+
+@Composable
+fun ChoiceButton(
+    title: String,
+    subtitle: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (isSelected) Color(0xFF64B5F6) else Color(0xFFFFF3E0)
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(containerColor = backgroundColor),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .height(72.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = title,
+                color = Color.Black,
+                fontSize = 18.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                color = Color(0xFF4E342E),
+                fontSize = 13.sp,
+                lineHeight = 16.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun ActivitySelectScreen(selected: String, onSelect: (String) -> Unit, onContinue: () -> Unit) {
+    BackgroundScreen {
+        Box(Modifier.fillMaxSize()) {
+            AppHeader(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 20.dp, top = 120.dp)
+            )
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .padding(bottom = BottomContinueReservedSpace),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.select_activity_title),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723)
+                )
+                Spacer(Modifier.height(16.dp))
+                ChoiceButton(
+                    title = stringResource(R.string.activity_sedentary),
+                    subtitle = stringResource(R.string.activity_sedentary_hint),
+                    isSelected = selected == "sedentary"
+                ) { onSelect("sedentary") }
+                ChoiceButton(
+                    title = stringResource(R.string.activity_light),
+                    subtitle = stringResource(R.string.activity_light_hint),
+                    isSelected = selected == "light"
+                ) { onSelect("light") }
+                ChoiceButton(
+                    title = stringResource(R.string.activity_moderate),
+                    subtitle = stringResource(R.string.activity_moderate_hint),
+                    isSelected = selected == "moderate"
+                ) { onSelect("moderate") }
+                ChoiceButton(
+                    title = stringResource(R.string.activity_active),
+                    subtitle = stringResource(R.string.activity_active_hint),
+                    isSelected = selected == "active"
+                ) { onSelect("active") }
+                ChoiceButton(
+                    title = stringResource(R.string.activity_very_active),
+                    subtitle = stringResource(R.string.activity_very_active_hint),
+                    isSelected = selected == "very_active"
+                ) { onSelect("very_active") }
+            }
+            BottomContinueButton(enabled = true, onClick = { if (selected.isNotBlank()) onContinue() })
+        }
+    }
+}
+
+@Composable
+fun GoalSelectScreen(selected: String, onSelect: (String) -> Unit, onContinue: () -> Unit) {
+    BackgroundScreen {
+        Box(Modifier.fillMaxSize()) {
+            AppHeader(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 20.dp, top = 120.dp)
+            )
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .padding(bottom = BottomContinueReservedSpace),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.select_goal_title),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723)
+                )
+                Spacer(Modifier.height(16.dp))
+                LanguageButton(
+                    text = stringResource(R.string.goal_lose),
+                    isSelected = selected == "lose"
+                ) { onSelect("lose") }
+                LanguageButton(
+                    text = stringResource(R.string.goal_maintain),
+                    isSelected = selected == "maintain"
+                ) { onSelect("maintain") }
+                LanguageButton(
+                    text = stringResource(R.string.goal_gain),
+                    isSelected = selected == "gain"
+                ) { onSelect("gain") }
+            }
+            BottomContinueButton(enabled = true, onClick = { if (selected.isNotBlank()) onContinue() })
+        }
+    }
+}
+
+@Composable
+fun KbjuResultScreen(result: Kbju, onFinish: () -> Unit) {
+    BackgroundScreen {
+        Box(Modifier.fillMaxSize()) {
+            AppHeader(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 20.dp, top = 120.dp)
+            )
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+                    .padding(bottom = BottomContinueReservedSpace),
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.kbju_result_title),
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723)
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(text = "${stringResource(R.string.calories_kcal)}: ${result.calories}", fontSize = 20.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(text = "${stringResource(R.string.proteins_g)}: ${result.proteins}", fontSize = 20.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(text = "${stringResource(R.string.fats_g)}: ${result.fats}", fontSize = 20.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(text = "${stringResource(R.string.carbs_g)}: ${result.carbs}", fontSize = 20.sp)
+            }
+            BottomContinueButton(label = stringResource(R.string.button_thanks), onClick = onFinish)
+        }
+    }
+}
+
 @Composable
 fun LanguageButton(
     text: String,
@@ -430,7 +770,7 @@ fun LanguageButton(
             .height(55.dp)
     ) {
         Text(
-            text,
+            text = text,
             color = Color.Black,
             fontSize = 22.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
@@ -449,52 +789,150 @@ class MainActivity : ComponentActivity() {
             TrackerControlTheme {
                 var currentScreen by remember { mutableStateOf("language") }
                 val ctx = LocalContext.current
-                when (currentScreen) {
-                    "language" -> LanguageSelectionScreen(
-                        selectedLangCode = langCode,
-                        onLanguageSelected = { code ->
-                            setLocale(this, code, restartActivity = true)
-                        },
-                        onContinueClicked = {
-                            currentScreen = "name"
-                        }
-                    )
-                    "name" -> NameInputScreen(
-                        onNameEntered = { name ->
-                            val user = UserStorage.loadUser(this).copy(name = name)
-                            UserStorage.saveUser(this, user)
-                            currentScreen = "kbjuQuestion"
-                        }
-                    )
-                    "kbjuQuestion" -> {
-                        val user = UserStorage.loadUser(this)
-                        KbjuQuestionScreen(
-                            name = user.name,
-                            onYesEnter = { currentScreen = "kbjuInput" },
-                            onNoCalculate = { }
+
+                var calc by remember { mutableStateOf(CalcInput()) }
+                var ageText by remember { mutableStateOf("") }
+                var weightText by remember { mutableStateOf("") }
+                var heightText by remember { mutableStateOf("") }
+
+                Crossfade(targetState = currentScreen, label = "screen_transition") { screen ->
+                    when (screen) {
+                        "language" -> LanguageSelectionScreen(
+                            selectedLangCode = langCode,
+                            onLanguageSelected = { code -> setLocale(this, code, restartActivity = true) },
+                            onContinueClicked = { currentScreen = "name" }
                         )
-                    }
-                    "kbjuInput" -> {
-                        val user = UserStorage.loadUser(this)
-                        KbjuInputScreen(
-                            initialCalories = user.dailyCalories,
-                            initialProteins = user.dailyProteins,
-                            initialFats = user.dailyFats,
-                            initialCarbs = user.dailyCarbs
-                        ) { cal, p, f, c ->
-                            val updated = user.copy(
-                                dailyCalories = cal,
-                                dailyProteins = p,
-                                dailyFats = f,
-                                dailyCarbs = c
+                        "name" -> NameInputScreen(
+                            onNameEntered = { name ->
+                                val user = UserStorage.loadUser(this).copy(name = name)
+                                UserStorage.saveUser(this, user)
+                                currentScreen = "kbjuQuestion"
+                            }
+                        )
+                        "kbjuQuestion" -> {
+                            val user = UserStorage.loadUser(this)
+                            KbjuQuestionScreen(
+                                name = user.name,
+                                onYesEnter = { currentScreen = "kbjuInput" },
+                                onNoCalculate = {
+                                    calc = CalcInput()
+                                    ageText = ""
+                                    weightText = ""
+                                    heightText = ""
+                                    currentScreen = "calcGender"
+                                }
                             )
-                            UserStorage.saveUser(ctx, updated)
-                            currentScreen = "done"
                         }
-                    }
-                    "done" -> {
-                        val user = UserStorage.loadUser(this)
-                        Greeting(user.name)
+                        "kbjuInput" -> {
+                            val user = UserStorage.loadUser(this)
+                            KbjuInputScreen(
+                                initialCalories = user.dailyCalories,
+                                initialProteins = user.dailyProteins,
+                                initialFats = user.dailyFats,
+                                initialCarbs = user.dailyCarbs
+                            ) { cal, p, f, c ->
+                                val updated = user.copy(
+                                    dailyCalories = cal,
+                                    dailyProteins = p,
+                                    dailyFats = f,
+                                    dailyCarbs = c
+                                )
+                                UserStorage.saveUser(ctx, updated)
+                                currentScreen = "done"
+                            }
+                        }
+                        "calcGender" -> GenderSelectScreen(
+                            selected = calc.gender,
+                            onSelect = { calc = calc.copy(gender = it) },
+                            onContinue = { currentScreen = "calcAge" }
+                        )
+                        "calcAge" -> AgeInputScreen(
+                            ageText = ageText,
+                            onChange = { ageText = it },
+                            onContinue = {
+                                val age = ageText.toIntOrNull() ?: 0
+                                if (age > 0) {
+                                    calc = calc.copy(age = age)
+                                    currentScreen = "calcWeight"
+                                }
+                            }
+                        )
+                        "calcWeight" -> WeightInputScreen(
+                            weightText = weightText,
+                            onChange = { weightText = it },
+                            onContinue = {
+                                val w = weightText.toIntOrNull() ?: 0
+                                if (w > 0) {
+                                    calc = calc.copy(weight = w)
+                                    currentScreen = "calcHeight"
+                                }
+                            }
+                        )
+                        "calcHeight" -> HeightInputScreen(
+                            heightText = heightText,
+                            onChange = { heightText = it },
+                            onContinue = {
+                                val h = heightText.toIntOrNull() ?: 0
+                                if (h > 0) {
+                                    calc = calc.copy(height = h)
+                                    currentScreen = "calcActivity"
+                                }
+                            }
+                        )
+                        "calcActivity" -> ActivitySelectScreen(
+                            selected = calc.activity,
+                            onSelect = { calc = calc.copy(activity = it) },
+                            onContinue = { currentScreen = "calcGoal" }
+                        )
+                        "calcGoal" -> GoalSelectScreen(
+                            selected = calc.goal,
+                            onSelect = { calc = calc.copy(goal = it) },
+                            onContinue = {
+                                if (calc.gender.isNotBlank() && calc.age > 0 && calc.weight > 0 &&
+                                    calc.height > 0 && calc.activity.isNotBlank() && calc.goal.isNotBlank()
+                                ) {
+                                    val res = calculateKbjuPlan(
+                                        gender = calc.gender,
+                                        age = calc.age,
+                                        height = calc.height,
+                                        weight = calc.weight,
+                                        activity = calc.activity,
+                                        goal = calc.goal
+                                    )
+                                    val user0 = UserStorage.loadUser(this)
+                                    val user = user0.copy(
+                                        gender = calc.gender,
+                                        age = calc.age,
+                                        height = calc.height,
+                                        weight = calc.weight,
+                                        activityLevel = calc.activity,
+                                        goal = calc.goal,
+                                        dailyCalories = res.calories,
+                                        dailyProteins = res.proteins,
+                                        dailyFats = res.fats,
+                                        dailyCarbs = res.carbs
+                                    )
+                                    UserStorage.saveUser(ctx, user)
+                                    currentScreen = "calcResult"
+                                }
+                            }
+                        )
+                        "calcResult" -> {
+                            val user = UserStorage.loadUser(this)
+                            KbjuResultScreen(
+                                result = Kbju(
+                                    user.dailyCalories,
+                                    user.dailyProteins,
+                                    user.dailyFats,
+                                    user.dailyCarbs
+                                ),
+                                onFinish = { currentScreen = "done" }
+                            )
+                        }
+                        "done" -> {
+                            val user = UserStorage.loadUser(this)
+                            Greeting(user.name)
+                        }
                     }
                 }
             }

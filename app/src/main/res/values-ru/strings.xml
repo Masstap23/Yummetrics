@@ -19,4 +19,36 @@
     <string name="fats_g">Жиры (г)</string>
     <string name="carbs_g">Углеводы (г)</string>
     <string name="button_finish">Закончить</string>
+    <string name="activity_sedentary_hint">Почти нет тренировок</string>
+    <string name="activity_light_hint">1–3 лёгкие тренировки в неделю</string>
+    <string name="activity_moderate_hint">3–5 тренировок в неделю</string>
+    <string name="activity_active_hint">6–7 тренировок/неделю или физ. работа</string>
+    <string name="activity_very_active_hint">Тяжёлые тренировки + физ. работа</string>
+    <string name="button_thanks">Спасибо!</string>
+    <string name="select_gender_title">Выберите ваш пол</string>
+    <string name="gender_male">Мужчина</string>
+    <string name="gender_female">Женщина</string>
+
+    <string name="enter_age_title">Введите ваш возраст</string>
+    <string name="age_years">Возраст (лет)</string>
+
+    <string name="enter_weight_title">Введите ваш вес</string>
+    <string name="weight_kg">Вес (кг)</string>
+
+    <string name="enter_height_title">Введите ваш рост</string>
+    <string name="height_cm">Рост (см)</string>
+
+    <string name="select_activity_title">Уровень активности</string>
+    <string name="activity_sedentary">Минимальная</string>
+    <string name="activity_light">Низкая</string>
+    <string name="activity_moderate">Средняя</string>
+    <string name="activity_active">Высокая</string>
+    <string name="activity_very_active">Очень высокая</string>
+
+    <string name="select_goal_title">Цель</string>
+    <string name="goal_lose">Похудение</string>
+    <string name="goal_maintain">Поддержание</string>
+    <string name="goal_gain">Набор веса</string>
+
+    <string name="kbju_result_title">Ваш дневной КБЖУ</string>
 </resources>

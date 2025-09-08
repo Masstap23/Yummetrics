@@ -21,4 +21,36 @@
     <string name="fats_g">Fats (g)</string>
     <string name="carbs_g">Carbs (g)</string>
     <string name="button_finish">Finish</string>
+    <string name="activity_sedentary_hint">Little or no exercise</string>
+    <string name="activity_light_hint">1–3 light workouts per week</string>
+    <string name="activity_moderate_hint">3–5 moderate workouts per week</string>
+    <string name="activity_active_hint">6–7 workouts/week or physical job</string>
+    <string name="activity_very_active_hint">Hard training + physical job</string>
+    <string name="button_thanks">Thanks!</string>
+    <string name="select_gender_title">Choose your gender</string>
+    <string name="gender_male">Male</string>
+    <string name="gender_female">Female</string>
+
+    <string name="enter_age_title">Enter your age</string>
+    <string name="age_years">Age (years)</string>
+
+    <string name="enter_weight_title">Enter your weight</string>
+    <string name="weight_kg">Weight (kg)</string>
+
+    <string name="enter_height_title">Enter your height</string>
+    <string name="height_cm">Height (cm)</string>
+
+    <string name="select_activity_title">Your activity level</string>
+    <string name="activity_sedentary">Sedentary</string>
+    <string name="activity_light">Light</string>
+    <string name="activity_moderate">Moderate</string>
+    <string name="activity_active">Active</string>
+    <string name="activity_very_active">Very active</string>
+
+    <string name="select_goal_title">Your goal</string>
+    <string name="goal_lose">Lose weight</string>
+    <string name="goal_maintain">Maintain</string>
+    <string name="goal_gain">Gain weight</string>
+
+    <string name="kbju_result_title">Your daily KBJU</string>
 </resources>

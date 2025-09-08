@@ -97,6 +97,14 @@ object UserStorage {
             dailyCarbs = prefs.getInt("dailyCarbs", 0)
         )
     }
+    fun setOnboardingCompleted(context: Context, completed: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("onboarding_completed", completed).apply()
+    }
+    fun isOnboardingCompleted(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean("onboarding_completed", false)
+    }
 }
 
 @Composable
@@ -304,10 +312,8 @@ fun KbjuInputScreen(
     var proteins by remember { mutableStateOf(if (initialProteins > 0) initialProteins.toString() else "") }
     var fats by remember { mutableStateOf(if (initialFats > 0) initialFats.toString() else "") }
     var carbs by remember { mutableStateOf(if (initialCarbs > 0) initialCarbs.toString() else "") }
-
     val onlyDigits: (String) -> String = { it.filter { ch -> ch.isDigit() } }
     val valid = calories.isNotBlank() && proteins.isNotBlank() && fats.isNotBlank() && carbs.isNotBlank()
-
     BackgroundScreen {
         Box(modifier = Modifier.fillMaxSize()) {
             AppHeader(
@@ -377,8 +383,6 @@ fun KbjuInputScreen(
     }
 }
 
-/* ====== СЦЕНАРИЙ «НЕТ, РАССЧИТАЙ ДЛЯ МЕНЯ» ====== */
-
 data class CalcInput(
     var gender: String = "",
     var age: Int = 0,
@@ -402,7 +406,6 @@ private fun calculateKbjuPlan(
         10 * weight + 6.25 * height - 5 * age + 5
     else
         10 * weight + 6.25 * height - 5 * age - 161
-
     val activityFactor = when (activity) {
         "sedentary" -> 1.2
         "light" -> 1.375
@@ -411,19 +414,15 @@ private fun calculateKbjuPlan(
         "very_active" -> 1.9
         else -> 1.2
     }
-
     val goalFactor = when (goal) {
         "lose" -> 0.85
         "gain" -> 1.15
         else -> 1.0
     }
-
     val targetCalories = (bmr * activityFactor * goalFactor).roundToInt()
-
     val proteinG = max((1.8 * weight).roundToInt(), 1)
     val fatG = max((0.9 * weight).roundToInt(), 1)
     val carbsG = max(((targetCalories - proteinG * 4 - fatG * 9) / 4.0).roundToInt(), 0)
-
     return Kbju(targetCalories, proteinG, fatG, carbsG)
 }
 
@@ -673,7 +672,6 @@ fun ActivitySelectScreen(selected: String, onSelect: (String) -> Unit, onContinu
     }
 }
 
-
 @Composable
 fun GoalSelectScreen(selected: String, onSelect: (String) -> Unit, onContinue: () -> Unit) {
     BackgroundScreen {
@@ -787,16 +785,15 @@ class MainActivity : ComponentActivity() {
         val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
         val langCode = prefs.getString("language", "en") ?: "en"
         setLocale(this, langCode, restartActivity = false)
+        val onboardingCompleted = UserStorage.isOnboardingCompleted(this)
         setContent {
             TrackerControlTheme {
-                var currentScreen by remember { mutableStateOf("language") }
+                var currentScreen by remember { mutableStateOf(if (onboardingCompleted) "done" else "language") }
                 val ctx = LocalContext.current
-
                 var calc by remember { mutableStateOf(CalcInput()) }
                 var ageText by remember { mutableStateOf("") }
                 var weightText by remember { mutableStateOf("") }
                 var heightText by remember { mutableStateOf("") }
-
                 Crossfade(targetState = currentScreen, label = "screen_transition") { screen ->
                     when (screen) {
                         "language" -> LanguageSelectionScreen(
@@ -840,6 +837,7 @@ class MainActivity : ComponentActivity() {
                                     dailyCarbs = c
                                 )
                                 UserStorage.saveUser(ctx, updated)
+                                UserStorage.setOnboardingCompleted(ctx, true)
                                 currentScreen = "done"
                             }
                         }
@@ -928,7 +926,10 @@ class MainActivity : ComponentActivity() {
                                     user.dailyFats,
                                     user.dailyCarbs
                                 ),
-                                onFinish = { currentScreen = "done" }
+                                onFinish = {
+                                    UserStorage.setOnboardingCompleted(ctx, true)
+                                    currentScreen = "done"
+                                }
                             )
                         }
                         "done" -> {

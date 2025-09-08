@@ -19,6 +19,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Home
@@ -53,11 +55,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.Yummetrics.ui.theme.TrackerControlTheme
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import org.json.JSONArray
+import org.json.JSONObject
 
 fun setLocale(activity: ComponentActivity, langCode: String, restartActivity: Boolean = false) {
     val locale = Locale(langCode)
@@ -73,7 +79,6 @@ fun setLocale(activity: ComponentActivity, langCode: String, restartActivity: Bo
     }
 }
 
-
 data class UserData(
     val name: String = "",
     val gender: String = "",
@@ -86,6 +91,17 @@ data class UserData(
     val dailyProteins: Int = 0,
     val dailyFats: Int = 0,
     val dailyCarbs: Int = 0
+)
+
+/** Запись о съеденном продукте за сегодня */
+data class FoodEntry(
+    val id: Long = System.currentTimeMillis(),
+    val name: String,
+    val calories: Int,
+    val proteins: Int,
+    val fats: Int,
+    val carbs: Int,
+    val ts: Long = System.currentTimeMillis()
 )
 
 object UserStorage {
@@ -145,8 +161,12 @@ object DailyStatsStorage {
     private const val K_F = "f"
     private const val K_C = "c"
     private const val K_LAST_CUTOFF = "last_cutoff_ms"
+    private const val K_ENTRIES = "entries_json" // JSON-массив записей за сегодня
+
+    /** ---------- Публичное API ---------- */
 
     fun get(context: Context): DayStats {
+        ensureDailyReset(context)
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return DayStats(
             calories = p.getInt(K_CAL, 0),
@@ -154,6 +174,56 @@ object DailyStatsStorage {
             fats = p.getInt(K_F, 0),
             carbs = p.getInt(K_C, 0)
         )
+    }
+
+    fun getEntries(context: Context): List<FoodEntry> {
+        ensureDailyReset(context)
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val arrStr = p.getString(K_ENTRIES, "[]") ?: "[]"
+        val arr = JSONArray(arrStr)
+        val list = ArrayList<FoodEntry>(arr.length())
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            list.add(
+                FoodEntry(
+                    id = o.optLong("id"),
+                    name = o.optString("name"),
+                    calories = o.optInt("cal"),
+                    proteins = o.optInt("p"),
+                    fats = o.optInt("f"),
+                    carbs = o.optInt("c"),
+                    ts = o.optLong("ts")
+                )
+            )
+        }
+        return list
+    }
+
+    fun addEntry(context: Context, name: String, cal: Int, pr: Int, fa: Int, ca: Int) {
+        ensureDailyReset(context)
+        // 1) обновим список
+        val list = getEntries(context).toMutableList()
+        val entry = FoodEntry(
+            name = name.ifBlank { "Без названия" },
+            calories = cal, proteins = pr, fats = fa, carbs = ca
+        )
+        list.add(0, entry) // сверху
+        saveEntries(context, list)
+        // 2) обновим суммы
+        add(context, cal, pr, fa, ca)
+    }
+
+    fun removeEntry(context: Context, id: Long) {
+        ensureDailyReset(context)
+        val list = getEntries(context).toMutableList()
+        val idx = list.indexOfFirst { it.id == id }
+        if (idx >= 0) {
+            val e = list[idx]
+            list.removeAt(idx)
+            saveEntries(context, list)
+            // откатим суммы
+            add(context, -e.calories, -e.proteins, -e.fats, -e.carbs)
+        }
     }
 
     fun add(context: Context, cal: Int, pr: Int, fa: Int, ca: Int) {
@@ -175,19 +245,58 @@ object DailyStatsStorage {
             .putInt(K_P, 0)
             .putInt(K_F, 0)
             .putInt(K_C, 0)
+            .putString(K_ENTRIES, "[]")
             .putLong(K_LAST_CUTOFF, setCutoffTo)
             .apply()
-    }
-
-    fun lastCutoffMillis(context: Context): Long {
-        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        return p.getLong(K_LAST_CUTOFF, 0L)
     }
 
     fun ensureDailyReset(context: Context) {
         val last = lastCutoffMillis(context)
         val currentCutoff = mostRecentCutoffMillis()
         if (last < currentCutoff) resetToZero(context, currentCutoff)
+    }
+
+    fun scheduleNextResetAlarm(context: Context) {
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, DailyResetReceiver::class.java)
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0
+        val pi = PendingIntent.getBroadcast(context, 1010, intent, flags)
+        val triggerAt = nextCutoffMillis()
+        try {
+            if (Build.VERSION.SDK_INT >= 23) {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            } else {
+                am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            }
+        } catch (_: SecurityException) {
+            am.set(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+        }
+    }
+
+    /** ---------- Вспомогательное ---------- */
+
+    private fun saveEntries(context: Context, list: List<FoodEntry>) {
+        val arr = JSONArray()
+        list.forEach { e ->
+            arr.put(
+                JSONObject().apply {
+                    put("id", e.id)
+                    put("name", e.name)
+                    put("cal", e.calories)
+                    put("p", e.proteins)
+                    put("f", e.fats)
+                    put("c", e.carbs)
+                    put("ts", e.ts)
+                }
+            )
+        }
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        p.edit().putString(K_ENTRIES, arr.toString()).apply()
+    }
+
+    private fun lastCutoffMillis(context: Context): Long {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return p.getLong(K_LAST_CUTOFF, 0L)
     }
 
     fun mostRecentCutoffMillis(): Long {
@@ -219,23 +328,6 @@ object DailyStatsStorage {
         }
         return next
     }
-
-    fun scheduleNextResetAlarm(context: Context) {
-        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, DailyResetReceiver::class.java)
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0
-        val pi = PendingIntent.getBroadcast(context, 1010, intent, flags)
-        val triggerAt = nextCutoffMillis()
-        try {
-            if (Build.VERSION.SDK_INT >= 23) {
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-            } else {
-                am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-            }
-        } catch (_: SecurityException) {
-            am.set(AlarmManager.RTC_WAKEUP, triggerAt, pi)
-        }
-    }
 }
 
 class DailyResetReceiver : BroadcastReceiver() {
@@ -263,12 +355,16 @@ fun BackgroundScreen(content: @Composable BoxScope.() -> Unit) {
             .fillMaxSize()
             .background(Color(0xFFFFF8E1))
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.with_sun),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+        // безопасная загрузка бэкграунда (если ресурса нет — не падаем)
+        val bgPainter = runCatching { painterResource(id = R.drawable.with_sun) }.getOrNull()
+        if (bgPainter != null) {
+            Image(
+                painter = bgPainter,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
         content()
     }
 }
@@ -364,6 +460,7 @@ fun SelectableCard(
     }
 }
 
+/* ================= Онбординг ================= */
 
 @Composable
 fun LanguageSelectionScreen(
@@ -487,7 +584,8 @@ fun KbjuQuestionScreen(
                     text = stringResource(R.string.hello_name, name.ifBlank { "User" }),
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF3E2723)
+                    color = Color(0xFF3E2723),
+                    textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -504,6 +602,8 @@ fun KbjuQuestionScreen(
         }
     }
 }
+
+/* ====== Ввод норм вручную (и из настроек) ====== */
 
 @Composable
 fun KbjuInputScreen(
@@ -594,6 +694,8 @@ fun KbjuInputScreen(
         }
     }
 }
+
+/* ====== Калькулятор (ветка "нет, рассчитай") ====== */
 
 data class CalcState(
     val gender: String? = null,
@@ -821,6 +923,8 @@ fun CalcResultScreen(
     }
 }
 
+/* ================= Главный экран с вкладками ================= */
+
 @Composable
 fun MainHost(onEditKbju: () -> Unit, onChangeLanguage: () -> Unit) {
     var tab by remember { mutableStateOf(0) }
@@ -864,10 +968,13 @@ fun MainHost(onEditKbju: () -> Unit, onChangeLanguage: () -> Unit) {
     }
 }
 
+/** Список дневных записей + шапка (кольцо, карточки) */
 @Composable
 fun HomeDashboard() {
     val ctx = LocalContext.current
     var stats by remember { mutableStateOf(DailyStatsStorage.get(ctx)) }
+    var entries by remember { mutableStateOf(DailyStatsStorage.getEntries(ctx)) }
+
     val user = UserStorage.loadUser(ctx) // без remember — чтобы подтягивались свежие значения
     val targetCal = max(1, user.dailyCalories)
     val leftCal = max(0, targetCal - stats.calories)
@@ -875,72 +982,159 @@ fun HomeDashboard() {
 
     var showSheet by remember { mutableStateOf(false) }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFFF8E1))
-            .padding(horizontal = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(Color(0xFFFFF8E1)),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Spacer(Modifier.height(16.dp))
-        CalorieRing(
-            valueLeft = leftCal,
-            progress = progress,
-            diameter = 260.dp,
-            stroke = 18.dp
-        )
-        Spacer(Modifier.height(24.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            MacroCard(
-                title = stringResource(R.string.protein_title),
-                current = stats.proteins,
-                target = max(1, user.dailyProteins),
-                emoji = "🍗",
-                modifier = Modifier.weight(1f)
-            )
-            MacroCard(
-                title = stringResource(R.string.fats_title),
-                current = stats.fats,
-                target = max(1, user.dailyFats),
-                emoji = "🥑",
-                modifier = Modifier.weight(1f)
-            )
-            MacroCard(
-                title = stringResource(R.string.carbs_title),
-                current = stats.carbs,
-                target = max(1, user.dailyCarbs),
-                emoji = "🍚",
-                modifier = Modifier.weight(1f)
+        item {
+            CalorieRing(
+                valueLeft = leftCal,
+                progress = progress,
+                diameter = 260.dp,
+                stroke = 18.dp
             )
         }
-        Spacer(Modifier.height(28.dp))
-        Button(
-            onClick = { showSheet = true },
-            shape = RoundedCornerShape(28.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-        ) {
-            Text(stringResource(R.string.add_food), color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        item {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MacroCard(
+                    title = stringResource(R.string.protein_title),
+                    current = stats.proteins,
+                    target = max(1, user.dailyProteins),
+                    emoji = "🍗",
+                    modifier = Modifier.weight(1f)
+                )
+                MacroCard(
+                    title = stringResource(R.string.fats_title),
+                    current = stats.fats,
+                    target = max(1, user.dailyFats),
+                    emoji = "🥑",
+                    modifier = Modifier.weight(1f)
+                )
+                MacroCard(
+                    title = stringResource(R.string.carbs_title),
+                    current = stats.carbs,
+                    target = max(1, user.dailyCarbs),
+                    emoji = "🍚",
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
-        Spacer(Modifier.height(16.dp))
+        item {
+            Text(
+                "Сегодня",
+                color = Color(0xFF3E2723),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+            )
+        }
+        if (entries.isEmpty()) {
+            item {
+                Text(
+                    "Пока пусто — добавьте продукт 👇",
+                    color = Color(0xFF5D4037),
+                    modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                )
+            }
+        } else {
+            items(entries, key = { it.id }) { e ->
+                FoodEntryRow(
+                    entry = e,
+                    onDelete = {
+                        DailyStatsStorage.removeEntry(ctx, e.id)
+                        // обновим состояние списка и сумм
+                        entries = DailyStatsStorage.getEntries(ctx)
+                        stats = DailyStatsStorage.get(ctx)
+                    }
+                )
+            }
+        }
+        item {
+            Button(
+                onClick = { showSheet = true },
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Text(stringResource(R.string.add_food), color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        item { Spacer(Modifier.height(8.dp)) }
     }
 
     if (showSheet) {
         AddFoodSheet(
             onClose = { showSheet = false },
-            onSave = { cal, p, f, c ->
-                DailyStatsStorage.add(ctx, cal, p, f, c)
+            onSave = { name, cal, p, f, c ->
+                DailyStatsStorage.addEntry(ctx, name, cal, p, f, c)
+                // обновим экран
+                entries = DailyStatsStorage.getEntries(ctx)
                 stats = DailyStatsStorage.get(ctx)
                 showSheet = false
             }
         )
     }
 }
+
+@Composable
+fun FoodEntryRow(entry: FoodEntry, onDelete: () -> Unit) {
+    val timeStr = remember(entry.ts) {
+        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(entry.ts))
+    }
+    Surface(
+        color = Color(0xFFFFF3E0),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(Color(0xFFFFECB3), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("🍽", fontSize = 20.sp)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(entry.name, fontWeight = FontWeight.SemiBold, color = Color(0xFF3E2723))
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Ккал: ${entry.calories} · Б: ${entry.proteins} · Ж: ${entry.fats} · У: ${entry.carbs}",
+                    color = Color(0xFF5D4037),
+                    fontSize = 13.sp
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(timeStr, color = Color(0xFF5D4037), fontSize = 12.sp)
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onDelete,
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text("Удалить", fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+/* ====== Отрисовки и диалоги ====== */
 
 @Composable
 fun CalorieRing(
@@ -1020,7 +1214,7 @@ fun MacroCard(title: String, current: Int, target: Int, emoji: String, modifier:
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddFoodSheet(onClose: () -> Unit, onSave: (cal: Int, p: Int, f: Int, c: Int) -> Unit) {
+fun AddFoodSheet(onClose: () -> Unit, onSave: (name: String, cal: Int, p: Int, f: Int, c: Int) -> Unit) {
     var name by remember { mutableStateOf("") }
     var cal by remember { mutableStateOf("") }
     var p by remember { mutableStateOf("") }
@@ -1046,7 +1240,7 @@ fun AddFoodSheet(onClose: () -> Unit, onSave: (cal: Int, p: Int, f: Int, c: Int)
 
             OutlinedTextField(
                 value = name, onValueChange = { name = it },
-                label = { Text(stringResource(R.string.add_food_name_hint)) },
+                label = { Text("Название продукта") },
                 singleLine = true, modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(10.dp))
@@ -1087,7 +1281,7 @@ fun AddFoodSheet(onClose: () -> Unit, onSave: (cal: Int, p: Int, f: Int, c: Int)
                         val pI = p.toIntOrNull() ?: 0
                         val fI = f.toIntOrNull() ?: 0
                         val cI = c.toIntOrNull() ?: 0
-                        onSave(calI, pI, fI, cI)
+                        onSave(name, calI, pI, fI, cI)
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
@@ -1268,6 +1462,7 @@ fun calculateKbju(
     )
 }
 
+/* ================= Root ================= */
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1424,7 +1619,6 @@ class MainActivity : ComponentActivity() {
                                 fats = res.dailyFats,
                                 carbs = res.dailyCarbs
                             ) {
-                                // сохранить в профиль и выйти
                                 val old = UserStorage.loadUser(activity)
                                 val updated = old.copy(
                                     gender = if (res.gender.isNotBlank()) res.gender else old.gender,

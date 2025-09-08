@@ -1,56 +1,74 @@
 <resources>
+    <!-- already had -->
+    <string name="kcal_left">kcal left</string>
     <string name="app_name">Yummetrics</string>
-    <string name="welcome_title">Welcome!</string>
-    <string name="welcome_message">Welcome!</string>
-    <string name="button_continue">Continue</string>
-    <string name="choose_language">Please select your language.</string>
+    <string name="protein_title">Protein</string>
+    <string name="fats_title">Fats</string>
+    <string name="carbs_title">Carbs</string>
+    <string name="add_food">Add food</string>
+    <string name="button_cancel">Cancel</string>
+    <string name="button_add">Add</string>
+    <string name="tab_home">Home</string>
+    <string name="tab_charts">Charts</string>
+    <string name="tab_settings">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_sub">Change app language</string>
+    <string name="settings_kbju">Daily targets</string>
+    <string name="settings_kbju_sub">Edit your KBJU goals</string>
+    <string name="settings_reset_now">Reset today</string>
+    <string name="settings_reset_now_sub">Set consumed to 0 now</string>
+    <string name="charts_stub">Charts are coming soon</string>
+
+    <!-- onboarding -->
+    <string name="welcome_title">Welcome</string>
+    <string name="choose_language">Choose your language</string>
     <string name="english">English</string>
-    <string name="russian">Русский</string>
-    <string name="polish">Polski</string>
-    <string name="Button_continue">Continue</string>
-    <string name="ask_name">How can I call you?</string>
-    <string name="name_hint">Name</string>
-    <string name="button_next">Continue</string>
-    <string name="hello_name">Hi, %1$s</string>
-    <string name="kbju_question">Do you know your daily KBJU (calories, proteins, fats, carbs)?</string>
+    <string name="russian">Russian</string>
+    <string name="polish">Polish</string>
+    <string name="button_continue">Continue</string>
+    <string name="ask_name">What is your name?</string>
+    <string name="name_hint">Your name</string>
+    <string name="hello_name">Hello, %1$s!</string>
+    <string name="kbju_question">Do you know your daily KBJU (calories, protein, fat, carbs)?</string>
     <string name="kbju_yes_enter">Yes, enter values</string>
     <string name="kbju_no_calculate">No, calculate for me</string>
-    <string name="kbju_title">Enter your daily KBJU</string>
+    <string name="kbju_title">Your daily KBJU</string>
     <string name="calories_kcal">Calories (kcal)</string>
     <string name="proteins_g">Proteins (g)</string>
     <string name="fats_g">Fats (g)</string>
     <string name="carbs_g">Carbs (g)</string>
     <string name="button_finish">Finish</string>
-    <string name="activity_sedentary_hint">Little or no exercise</string>
-    <string name="activity_light_hint">1–3 light workouts per week</string>
-    <string name="activity_moderate_hint">3–5 moderate workouts per week</string>
-    <string name="activity_active_hint">6–7 workouts/week or physical job</string>
-    <string name="activity_very_active_hint">Hard training + physical job</string>
-    <string name="button_thanks">Thanks!</string>
-    <string name="select_gender_title">Choose your gender</string>
+
+    <!-- bottom sheet -->
+    <string name="add_food_name_hint">Dish name</string>
+
+    <!-- settings flows -->
+    <string name="kbju_settings_entry_title">Do you know your daily KBJU?</string>
+    <string name="language_settings_title">Choose your language</string>
+
+    <!-- calculator steps -->
+    <string name="calc_gender_title">Choose your gender</string>
     <string name="gender_male">Male</string>
     <string name="gender_female">Female</string>
-
-    <string name="enter_age_title">Enter your age</string>
-    <string name="age_years">Age (years)</string>
-
-    <string name="enter_weight_title">Enter your weight</string>
+    <string name="calc_stats_title">Enter your stats</string>
     <string name="weight_kg">Weight (kg)</string>
-
-    <string name="enter_height_title">Enter your height</string>
     <string name="height_cm">Height (cm)</string>
-
-    <string name="select_activity_title">Your activity level</string>
+    <string name="age_years">Age (years)</string>
+    <string name="calc_activity_title">Physical activity</string>
     <string name="activity_sedentary">Sedentary</string>
     <string name="activity_light">Light</string>
     <string name="activity_moderate">Moderate</string>
-    <string name="activity_active">Active</string>
-    <string name="activity_very_active">Very active</string>
-
-    <string name="select_goal_title">Your goal</string>
+    <string name="activity_high">High</string>
+    <string name="activity_very_high">Very high</string>
+    <string name="activity_sedentary_desc">Little to no exercise</string>
+    <string name="activity_light_desc">1–3 times/week light activity</string>
+    <string name="activity_moderate_desc">3–5 times/week moderate</string>
+    <string name="activity_high_desc">6–7 times/week intense</string>
+    <string name="activity_very_high_desc">Very intensive / physical job</string>
+    <string name="calc_goal_title">Your goal</string>
     <string name="goal_lose">Lose weight</string>
     <string name="goal_maintain">Maintain</string>
     <string name="goal_gain">Gain weight</string>
-
-    <string name="kbju_result_title">Your daily KBJU</string>
+    <string name="calc_result_title">Calculated daily targets</string>
+    <string name="button_thanks">Thanks!</string>
 </resources>

@@ -1,54 +1,73 @@
 <resources>
+    <string name="kcal_left">kcal pozostało</string>
     <string name="app_name">Yummetrics</string>
-    <string name="welcome_title">Witamy!</string>
-    <string name="choose_language">Wybierz swój język</string>
-    <string name="english">English</string>
-    <string name="russian">Русский</string>
+    <string name="protein_title">Białko</string>
+    <string name="fats_title">Tłuszcze</string>
+    <string name="carbs_title">Węglowodany</string>
+    <string name="add_food">Dodaj produkt</string>
+    <string name="button_cancel">Anuluj</string>
+    <string name="button_add">Dodaj</string>
+    <string name="tab_home">Główna</string>
+    <string name="tab_charts">Wykresy</string>
+    <string name="tab_settings">Ustawienia</string>
+    <string name="settings_language">Język</string>
+    <string name="settings_language_sub">Zmień język aplikacji</string>
+    <string name="settings_kbju">Dzienne normy</string>
+    <string name="settings_kbju_sub">Edytuj cele KBJU</string>
+    <string name="settings_reset_now">Zresetuj dzisiaj</string>
+    <string name="settings_reset_now_sub">Wyzeruj spożycie teraz</string>
+    <string name="charts_stub">Wykresy wkrótce</string>
+
+    <!-- onboarding -->
+    <string name="welcome_title">Witamy</string>
+    <string name="choose_language">Wybierz język</string>
+    <string name="english">Angielski</string>
+    <string name="russian">Rosyjski</string>
     <string name="polish">Polski</string>
     <string name="button_continue">Kontynuuj</string>
-    <string name="ask_name">Jak mogę się do Ciebie zwracać?</string>
-    <string name="name_hint">Imię</string>
-    <string name="button_next">Kontynuuj</string>
-    <string name="hello_name">Cześć, %1$s</string>
-    <string name="kbju_question">Czy znasz swoje dzienne KBJU (kalorie, białka, tłuszcze, węglowodany)?</string>
-    <string name="kbju_yes_enter">Tak, wprowadzić wartości</string>
-    <string name="kbju_no_calculate">Nie, oblicz za mnie</string>
-    <string name="kbju_title">Wprowadź swoje dzienne KBJU</string>
+    <string name="ask_name">Jak masz na imię?</string>
+    <string name="name_hint">Twoje imię</string>
+    <string name="hello_name">Cześć, %1$s!</string>
+    <string name="kbju_question">Czy znasz swoją dzienną normę KBJU (kalorie, białko, tłuszcze, węglowodany)?</string>
+    <string name="kbju_yes_enter">Tak, wprowadzę wartości</string>
+    <string name="kbju_no_calculate">Nie, wylicz dla mnie</string>
+    <string name="kbju_title">Twoje dzienne normy KBJU</string>
     <string name="calories_kcal">Kalorie (kcal)</string>
-    <string name="proteins_g">Białka (g)</string>
+    <string name="proteins_g">Białko (g)</string>
     <string name="fats_g">Tłuszcze (g)</string>
     <string name="carbs_g">Węglowodany (g)</string>
     <string name="button_finish">Zakończ</string>
-    <string name="activity_sedentary_hint">Brak ćwiczeń</string>
-    <string name="activity_light_hint">1–3 lekkie treningi w tygodniu</string>
-    <string name="activity_moderate_hint">3–5 treningów w tygodniu</string>
-    <string name="activity_active_hint">6–7 treningów/tydz. lub praca fizyczna</string>
-    <string name="activity_very_active_hint">Ciężkie treningi + praca fizyczna</string>
-    <string name="button_thanks">Dziękuję!</string>
-    <string name="select_gender_title">Wybierz płeć</string>
+
+    <!-- bottom sheet -->
+    <string name="add_food_name_hint">Nazwa dania</string>
+
+    <!-- settings flows -->
+    <string name="kbju_settings_entry_title">Czy znasz swoją dzienną normę KBJU?</string>
+    <string name="language_settings_title">Wybierz język</string>
+
+    <!-- calculator steps -->
+    <string name="calc_gender_title">Wybierz płeć</string>
     <string name="gender_male">Mężczyzna</string>
     <string name="gender_female">Kobieta</string>
-
-    <string name="enter_age_title">Podaj swój wiek</string>
-    <string name="age_years">Wiek (lat)</string>
-
-    <string name="enter_weight_title">Podaj swoją masę</string>
+    <string name="calc_stats_title">Podaj parametry</string>
     <string name="weight_kg">Waga (kg)</string>
-
-    <string name="enter_height_title">Podaj swój wzrost</string>
     <string name="height_cm">Wzrost (cm)</string>
-
-    <string name="select_activity_title">Poziom aktywności</string>
-    <string name="activity_sedentary">Siedzący</string>
-    <string name="activity_light">Lekki</string>
-    <string name="activity_moderate">Umiarkowany</string>
-    <string name="activity_active">Wysoki</string>
-    <string name="activity_very_active">Bardzo wysoki</string>
-
-    <string name="select_goal_title">Cel</string>
+    <string name="age_years">Wiek (lata)</string>
+    <string name="calc_activity_title">Aktywność fizyczna</string>
+    <string name="activity_sedentary">Siedzący tryb</string>
+    <string name="activity_light">Lekka</string>
+    <string name="activity_moderate">Umiarkowana</string>
+    <string name="activity_high">Wysoka</string>
+    <string name="activity_very_high">Bardzo wysoka</string>
+    <string name="activity_sedentary_desc">Mało lub brak ćwiczeń</string>
+    <string name="activity_light_desc">Lekka aktywność 1–3 razy/tydz.</string>
+    <string name="activity_moderate_desc">Umiarkowana 3–5 razy/tydz.</string>
+    <string name="activity_high_desc">Intensywnie 6–7 razy/tydz.</string>
+    <string name="activity_very_high_desc">Bardzo intensywnie / praca fizyczna</string>
+    <string name="calc_goal_title">Twój cel</string>
     <string name="goal_lose">Redukcja</string>
     <string name="goal_maintain">Utrzymanie</string>
     <string name="goal_gain">Masa</string>
-
-    <string name="kbju_result_title">Twoje dzienne KBJU</string>
+    <string name="calc_result_title">Wyliczone normy dzienne</string>
+    <string name="button_thanks">Dzięki!</string>
 </resources>

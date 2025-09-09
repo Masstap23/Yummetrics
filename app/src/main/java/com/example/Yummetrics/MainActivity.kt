@@ -154,8 +154,6 @@ object UserStorage {
 
 data class DayStats(val calories: Int = 0, val proteins: Int = 0, val fats: Int = 0, val carbs: Int = 0)
 
-/* ===== История для графиков ===== */
-
 data class DayTotals(
     val dateKey: String,
     val weight: Float? = null,
@@ -184,22 +182,27 @@ object HistoryStorage {
     fun getAll(context: Context): MutableList<DayTotals> {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val arrStr = p.getString(K_DAYS, "[]") ?: "[]"
-        val arr = JSONArray(arrStr)
-        val list = ArrayList<DayTotals>(arr.length())
-        for (i in 0 until arr.length()) {
-            val o = arr.getJSONObject(i)
-            list.add(
-                DayTotals(
-                    dateKey = o.getString("date"),
-                    weight = if (o.has("w") && !o.isNull("w")) o.getDouble("w").toFloat() else null,
-                    calories = if (o.has("cal") && !o.isNull("cal")) o.getInt("cal") else null,
-                    proteins = if (o.has("p") && !o.isNull("p")) o.getInt("p") else null,
-                    fats = if (o.has("f") && !o.isNull("f")) o.getInt("f") else null,
-                    carbs = if (o.has("c") && !o.isNull("c")) o.getInt("c") else null
+        return try {
+            val arr = JSONArray(arrStr)
+            val list = ArrayList<DayTotals>(arr.length())
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                list.add(
+                    DayTotals(
+                        dateKey = o.optString("date"),
+                        weight = if (!o.isNull("w")) o.optDouble("w").toFloat() else null,
+                        calories = if (!o.isNull("cal")) o.optInt("cal") else null,
+                        proteins = if (!o.isNull("p")) o.optInt("p") else null,
+                        fats = if (!o.isNull("f")) o.optInt("f") else null,
+                        carbs = if (!o.isNull("c")) o.optInt("c") else null
+                    )
                 )
-            )
+            }
+            list
+        } catch (_: Exception) {
+            p.edit().remove(K_DAYS).apply()
+            mutableListOf()
         }
-        return list
     }
 
     private fun saveAll(context: Context, list: List<DayTotals>) {
@@ -295,8 +298,6 @@ object HistoryStorage {
     }
 }
 
-/* ===== Текущая статистика дня и ночной сброс ===== */
-
 object DailyStatsStorage {
     private const val PREFS = "daily_stats"
     private const val K_CAL = "cal"
@@ -321,24 +322,29 @@ object DailyStatsStorage {
         ensureDailyReset(context)
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val arrStr = p.getString(K_ENTRIES, "[]") ?: "[]"
-        val arr = JSONArray(arrStr)
-        val list = ArrayList<FoodEntry>(arr.length())
-        for (i in 0 until arr.length()) {
-            val o = arr.getJSONObject(i)
-            list.add(
-                FoodEntry(
-                    id = o.optLong("id"),
-                    name = o.optString("name"),
-                    calories = o.optInt("cal"),
-                    proteins = o.optInt("p"),
-                    fats = o.optInt("f"),
-                    carbs = o.optInt("c"),
-                    quantityGrams = o.optInt("qty"),
-                    ts = o.optLong("ts")
+        return try {
+            val arr = JSONArray(arrStr)
+            val list = ArrayList<FoodEntry>(arr.length())
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                list.add(
+                    FoodEntry(
+                        id = o.optLong("id"),
+                        name = o.optString("name"),
+                        calories = o.optInt("cal"),
+                        proteins = o.optInt("p"),
+                        fats = o.optInt("f"),
+                        carbs = o.optInt("c"),
+                        quantityGrams = o.optInt("qty"),
+                        ts = o.optLong("ts")
+                    )
                 )
-            )
+            }
+            list
+        } catch (_: Exception) {
+            p.edit().putString(K_ENTRIES, "[]").apply()
+            emptyList()
         }
-        return list
     }
 
     fun addEntry(context: Context, name: String, calPer100: Int, pPer100: Int, fPer100: Int, cPer100: Int, qtyG: Int) {
@@ -383,11 +389,35 @@ object DailyStatsStorage {
             .apply()
     }
 
-    fun resetToZero(context: Context, setCutoffTo: Long = mostRecentCutoffMillis()) {
-        val oldStats = get(context)
-        HistoryStorage.recordMacrosFromStats(context, setCutoffTo, oldStats)
-
+    private fun saveEntries(context: Context, list: List<FoodEntry>) {
+        val arr = JSONArray()
+        list.forEach { e ->
+            arr.put(
+                JSONObject().apply {
+                    put("id", e.id)
+                    put("name", e.name)
+                    put("cal", e.calories)
+                    put("p", e.proteins)
+                    put("f", e.fats)
+                    put("c", e.carbs)
+                    put("qty", e.quantityGrams)
+                    put("ts", e.ts)
+                }
+            )
+        }
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        p.edit().putString(K_ENTRIES, arr.toString()).apply()
+    }
+
+    fun resetToZero(context: Context, setCutoffTo: Long = mostRecentCutoffMillis()) {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val oldStats = DayStats(
+            calories = p.getInt(K_CAL, 0),
+            proteins = p.getInt(K_P, 0),
+            fats = p.getInt(K_F, 0),
+            carbs = p.getInt(K_C, 0)
+        )
+        HistoryStorage.recordMacrosFromStats(context, setCutoffTo, oldStats)
         p.edit()
             .putInt(K_CAL, 0)
             .putInt(K_P, 0)
@@ -419,26 +449,6 @@ object DailyStatsStorage {
         } catch (_: SecurityException) {
             am.set(AlarmManager.RTC_WAKEUP, triggerAt, pi)
         }
-    }
-
-    private fun saveEntries(context: Context, list: List<FoodEntry>) {
-        val arr = JSONArray()
-        list.forEach { e ->
-            arr.put(
-                JSONObject().apply {
-                    put("id", e.id)
-                    put("name", e.name)
-                    put("cal", e.calories)
-                    put("p", e.proteins)
-                    put("f", e.fats)
-                    put("c", e.carbs)
-                    put("qty", e.quantityGrams)
-                    put("ts", e.ts)
-                }
-            )
-        }
-        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        p.edit().putString(K_ENTRIES, arr.toString()).apply()
     }
 
     private fun lastCutoffMillis(context: Context): Long {
@@ -1063,8 +1073,6 @@ fun CalcResultScreen(
     }
 }
 
-/* ===== Главная, список, графики, настройки ===== */
-
 @Composable
 fun MainHost(onEditKbju: () -> Unit, onChangeLanguage: () -> Unit) {
     var tab by remember { mutableStateOf(0) }
@@ -1503,8 +1511,6 @@ fun SettingTile(title: String, subtitle: String, onClick: () -> Unit) {
     }
 }
 
-/* ====== ЭКРАН ГРАФИКОВ ====== */
-
 enum class Metric { WEIGHT, CAL, PROT, FAT, CARB }
 
 @Composable
@@ -1648,15 +1654,20 @@ object WeightStorage {
     fun getAll(context: Context): List<Pair<Long, Float>> {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val json = p.getString(KEY, "[]") ?: "[]"
-        val arr = JSONArray(json)
-        val out = ArrayList<Pair<Long, Float>>(arr.length())
-        for (i in 0 until arr.length()) {
-            val o = arr.getJSONObject(i)
-            val d = o.optLong("d", 0L)
-            val kg = o.optDouble("kg", 0.0).toFloat()
-            if (d > 0) out.add(d to kg)
+        return try {
+            val arr = JSONArray(json)
+            val out = ArrayList<Pair<Long, Float>>(arr.length())
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val d = o.optLong("d", 0L)
+                val kg = o.optDouble("kg", 0.0).toFloat()
+                if (d > 0) out.add(d to kg)
+            }
+            out.sortedBy { it.first }
+        } catch (_: Exception) {
+            p.edit().putString(KEY, "[]").apply()
+            emptyList()
         }
-        return out.sortedBy { it.first }
     }
 
     private fun saveAll(context: Context, list: List<Pair<Long, Float>>) {
@@ -1699,7 +1710,6 @@ fun ChartCard(
     }
 }
 
-/* >>> Новая версия LineChart с осями слева <<< */
 @Composable
 fun LineChart(
     values: List<Float>,
@@ -1743,8 +1753,8 @@ fun LineChart(
                 horizontalAlignment = Alignment.End
             ) {
                 val ticks = (0..yTicks).map { i ->
-                    val frac = i / yTicks.toFloat() // 0..1
-                    val value = vMin + (vMax - vMin) * (1f - frac) // сверху vMax
+                    val frac = i / yTicks.toFloat()
+                    val value = vMin + (vMax - vMin) * (1f - frac)
                     formatY(value)
                 }
                 ticks.forEach { label ->
@@ -1763,7 +1773,6 @@ fun LineChart(
                 val h = size.height
                 val strokePx = stroke.toPx()
 
-                // горизонтальные линии сетки
                 for (i in 0..yTicks) {
                     val y = h * (i / yTicks.toFloat())
                     drawLine(
@@ -2177,8 +2186,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-/* ===== Preview ===== */
 
 @Preview(showBackground = true)
 @Composable

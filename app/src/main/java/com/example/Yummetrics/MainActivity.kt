@@ -93,7 +93,6 @@ data class UserData(
     val dailyCarbs: Int = 0
 )
 
-/** Запись о съеденном продукте за сегодня */
 data class FoodEntry(
     val id: Long = System.currentTimeMillis(),
     val name: String,
@@ -101,6 +100,7 @@ data class FoodEntry(
     val proteins: Int,
     val fats: Int,
     val carbs: Int,
+    val quantityGrams: Int,
     val ts: Long = System.currentTimeMillis()
 )
 
@@ -161,9 +161,7 @@ object DailyStatsStorage {
     private const val K_F = "f"
     private const val K_C = "c"
     private const val K_LAST_CUTOFF = "last_cutoff_ms"
-    private const val K_ENTRIES = "entries_json" // JSON-массив записей за сегодня
-
-    /** ---------- Публичное API ---------- */
+    private const val K_ENTRIES = "entries_json"
 
     fun get(context: Context): DayStats {
         ensureDailyReset(context)
@@ -192,6 +190,7 @@ object DailyStatsStorage {
                     proteins = o.optInt("p"),
                     fats = o.optInt("f"),
                     carbs = o.optInt("c"),
+                    quantityGrams = o.optInt("qty"),
                     ts = o.optLong("ts")
                 )
             )
@@ -199,18 +198,22 @@ object DailyStatsStorage {
         return list
     }
 
-    fun addEntry(context: Context, name: String, cal: Int, pr: Int, fa: Int, ca: Int) {
+    fun addEntry(context: Context, name: String, calPer100: Int, pPer100: Int, fPer100: Int, cPer100: Int, qtyG: Int) {
         ensureDailyReset(context)
-        // 1) обновим список
+        val factor = qtyG.coerceAtLeast(0) / 100f
+        val cal = (calPer100 * factor).roundToInt()
+        val p = (pPer100 * factor).roundToInt()
+        val f = (fPer100 * factor).roundToInt()
+        val c = (cPer100 * factor).roundToInt()
         val list = getEntries(context).toMutableList()
         val entry = FoodEntry(
-            name = name.ifBlank { "Без названия" },
-            calories = cal, proteins = pr, fats = fa, carbs = ca
+            name = name.ifBlank { context.getString(R.string.food_name_default) },
+            calories = cal, proteins = p, fats = f, carbs = c,
+            quantityGrams = qtyG.coerceAtLeast(0)
         )
-        list.add(0, entry) // сверху
+        list.add(0, entry)
         saveEntries(context, list)
-        // 2) обновим суммы
-        add(context, cal, pr, fa, ca)
+        add(context, cal, p, f, c)
     }
 
     fun removeEntry(context: Context, id: Long) {
@@ -221,7 +224,6 @@ object DailyStatsStorage {
             val e = list[idx]
             list.removeAt(idx)
             saveEntries(context, list)
-            // откатим суммы
             add(context, -e.calories, -e.proteins, -e.fats, -e.carbs)
         }
     }
@@ -273,8 +275,6 @@ object DailyStatsStorage {
         }
     }
 
-    /** ---------- Вспомогательное ---------- */
-
     private fun saveEntries(context: Context, list: List<FoodEntry>) {
         val arr = JSONArray()
         list.forEach { e ->
@@ -286,6 +286,7 @@ object DailyStatsStorage {
                     put("p", e.proteins)
                     put("f", e.fats)
                     put("c", e.carbs)
+                    put("qty", e.quantityGrams)
                     put("ts", e.ts)
                 }
             )
@@ -355,7 +356,6 @@ fun BackgroundScreen(content: @Composable BoxScope.() -> Unit) {
             .fillMaxSize()
             .background(Color(0xFFFFF8E1))
     ) {
-        // безопасная загрузка бэкграунда (если ресурса нет — не падаем)
         val bgPainter = runCatching { painterResource(id = R.drawable.with_sun) }.getOrNull()
         if (bgPainter != null) {
             Image(
@@ -392,8 +392,8 @@ fun BoxScope.BottomContinueButton(
         enabled = enabled,
         colors = ButtonDefaults.buttonColors(
             containerColor = Color(0xFFFFC107),
-            disabledContainerColor = Color(0xFFFFE082),
-            disabledContentColor = Color(0xFF616161)
+            disabledContainerColor = Color(0xFFFFC107),
+            disabledContentColor = Color(0xFF212121)
         ),
         shape = RoundedCornerShape(32.dp),
         modifier = Modifier
@@ -413,7 +413,7 @@ fun LanguageButton(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isSelected) Color(0xFF64B5F6) else Color(0xFFFFF3E0)
+    val backgroundColor = if (isSelected) Color(0xFFFFB300) else Color(0xFFFFE082)
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -425,7 +425,7 @@ fun LanguageButton(
             .height(55.dp)
     ) {
         Text(
-            text = text,
+            text,
             color = Color.Black,
             fontSize = 22.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
@@ -441,7 +441,7 @@ fun SelectableCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val bg = if (selected) Color(0xFFFFD54F) else Color(0xFFFFF3E0)
+    val bg = if (selected) Color(0xFFFFB300) else Color(0xFFFFE082)
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
@@ -459,8 +459,6 @@ fun SelectableCard(
         }
     }
 }
-
-/* ================= Онбординг ================= */
 
 @Composable
 fun LanguageSelectionScreen(
@@ -496,7 +494,8 @@ fun LanguageSelectionScreen(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color.Black,
-                    modifier = Modifier.padding(top = 24.dp, bottom = 16.dp)
+                    modifier = Modifier.padding(top = 24.dp, bottom = 16.dp),
+                    textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(80.dp))
                 LanguageButton(
@@ -539,7 +538,8 @@ fun NameInputScreen(onNameEntered: (String) -> Unit) {
                     text = stringResource(R.string.ask_name),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF3E2723)
+                    color = Color(0xFF3E2723),
+                    textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
@@ -575,11 +575,11 @@ fun KbjuQuestionScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(24.dp)
+                    .padding(top = 100.dp)
                     .padding(bottom = BottomContinueReservedSpace),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Top
             ) {
-                Spacer(modifier = Modifier.height(40.dp))
                 Text(
                     text = stringResource(R.string.hello_name, name.ifBlank { "User" }),
                     fontSize = 28.sp,
@@ -602,8 +602,6 @@ fun KbjuQuestionScreen(
         }
     }
 }
-
-/* ====== Ввод норм вручную (и из настроек) ====== */
 
 @Composable
 fun KbjuInputScreen(
@@ -645,7 +643,8 @@ fun KbjuInputScreen(
                     text = stringResource(R.string.kbju_title),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF3E2723)
+                    color = Color(0xFF3E2723),
+                    textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 OutlinedTextField(
@@ -695,8 +694,6 @@ fun KbjuInputScreen(
     }
 }
 
-/* ====== Калькулятор (ветка "нет, рассчитай") ====== */
-
 data class CalcState(
     val gender: String? = null,
     val weight: String = "",
@@ -724,22 +721,17 @@ fun CalcGenderScreen(plainStyle: Boolean, value: String?, onSelect: (String) -> 
                 Modifier
                     .fillMaxSize()
                     .padding(24.dp)
+                    .padding(top = if (plainStyle) 80.dp else 160.dp)
                     .padding(bottom = BottomContinueReservedSpace),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Top
             ) {
-                Text(stringResource(R.string.calc_gender_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
+                Text(stringResource(R.string.calc_gender_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(20.dp))
-                LanguageButton(
-                    text = stringResource(R.string.gender_male),
-                    isSelected = value == "male"
-                ) { onSelect("male") }
-                LanguageButton(
-                    text = stringResource(R.string.gender_female),
-                    isSelected = value == "female"
-                ) { onSelect("female") }
+                LanguageButton(text = stringResource(R.string.gender_male), isSelected = value == "male") { onSelect("male") }
+                LanguageButton(text = stringResource(R.string.gender_female), isSelected = value == "female") { onSelect("female") }
             }
-            BottomContinueButton(enabled = value != null, onClick = onNext)
+            BottomContinueButton(enabled = true, onClick = { if (value != null) onNext() })
         }
     }
 }
@@ -764,11 +756,12 @@ fun CalcStatsScreen(plainStyle: Boolean, weight: String, height: String, age: St
                 Modifier
                     .fillMaxSize()
                     .padding(24.dp)
+                    .padding(top = if (plainStyle) 80.dp else 160.dp)
                     .padding(bottom = BottomContinueReservedSpace),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Top
             ) {
-                Text(stringResource(R.string.calc_stats_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
+                Text(stringResource(R.string.calc_stats_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = weight, onValueChange = { onChange(onlyDigits(it), height, age) },
@@ -785,7 +778,7 @@ fun CalcStatsScreen(plainStyle: Boolean, weight: String, height: String, age: St
                     label = { Text(stringResource(R.string.age_years)) }, singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
             }
-            BottomContinueButton(enabled = valid, onClick = onNext)
+            BottomContinueButton(enabled = true, onClick = { if (valid) onNext() })
         }
     }
 }
@@ -808,10 +801,10 @@ fun CalcActivityScreen(plainStyle: Boolean, value: String?, onSelect: (String) -
                 Modifier
                     .fillMaxSize()
                     .padding(24.dp)
-                    .padding(bottom = BottomContinueReservedSpace),
-                verticalArrangement = Arrangement.Center
+                    .padding(top = if (plainStyle) 80.dp else 160.dp)
+                    .padding(bottom = BottomContinueReservedSpace)
             ) {
-                Text(stringResource(R.string.calc_activity_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
+                Text(stringResource(R.string.calc_activity_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(12.dp))
                 SelectableCard(
                     title = stringResource(R.string.activity_sedentary),
@@ -844,7 +837,7 @@ fun CalcActivityScreen(plainStyle: Boolean, value: String?, onSelect: (String) -
                     onClick = { onSelect("very_high") }
                 )
             }
-            BottomContinueButton(enabled = value != null, onClick = onNext)
+            BottomContinueButton(enabled = true, onClick = { if (value != null) onNext() })
         }
     }
 }
@@ -867,16 +860,17 @@ fun CalcGoalScreen(plainStyle: Boolean, value: String?, onSelect: (String) -> Un
                 Modifier
                     .fillMaxSize()
                     .padding(24.dp)
+                    .padding(top = if (plainStyle) 96.dp else 176.dp)
                     .padding(bottom = BottomContinueReservedSpace),
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Top
             ) {
-                Text(stringResource(R.string.calc_goal_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
+                Text(stringResource(R.string.calc_goal_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(12.dp))
                 LanguageButton(text = stringResource(R.string.goal_lose), isSelected = value == "lose") { onSelect("lose") }
                 LanguageButton(text = stringResource(R.string.goal_maintain), isSelected = value == "maintain") { onSelect("maintain") }
                 LanguageButton(text = stringResource(R.string.goal_gain), isSelected = value == "gain") { onSelect("gain") }
             }
-            BottomContinueButton(enabled = value != null, onClick = onNext)
+            BottomContinueButton(enabled = true, onClick = { if (value != null) onNext() })
         }
     }
 }
@@ -907,7 +901,7 @@ fun CalcResultScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(stringResource(R.string.calc_result_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
+                Text(stringResource(R.string.calc_result_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(16.dp))
                 Text("${stringResource(R.string.calories_kcal)}: $calories", color = Color(0xFF3E2723), fontSize = 18.sp)
                 Text("${stringResource(R.string.proteins_g)}: $proteins", color = Color(0xFF3E2723), fontSize = 18.sp)
@@ -922,8 +916,6 @@ fun CalcResultScreen(
         }
     }
 }
-
-/* ================= Главный экран с вкладками ================= */
 
 @Composable
 fun MainHost(onEditKbju: () -> Unit, onChangeLanguage: () -> Unit) {
@@ -968,28 +960,26 @@ fun MainHost(onEditKbju: () -> Unit, onChangeLanguage: () -> Unit) {
     }
 }
 
-/** Список дневных записей + шапка (кольцо, карточки) */
 @Composable
 fun HomeDashboard() {
     val ctx = LocalContext.current
     var stats by remember { mutableStateOf(DailyStatsStorage.get(ctx)) }
     var entries by remember { mutableStateOf(DailyStatsStorage.getEntries(ctx)) }
-
-    val user = UserStorage.loadUser(ctx) // без remember — чтобы подтягивались свежие значения
+    val user = UserStorage.loadUser(ctx)
     val targetCal = max(1, user.dailyCalories)
     val leftCal = max(0, targetCal - stats.calories)
     val progress = min(1f, stats.calories.toFloat() / targetCal.toFloat())
-
     var showSheet by remember { mutableStateOf(false) }
 
-    LazyColumn(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFFF8E1)),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(Color(0xFFFFF8E1))
+            .padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item {
+        Spacer(Modifier.height(16.dp))
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             CalorieRing(
                 valueLeft = leftCal,
                 progress = progress,
@@ -997,85 +987,91 @@ fun HomeDashboard() {
                 stroke = 18.dp
             )
         }
-        item {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MacroCard(
-                    title = stringResource(R.string.protein_title),
-                    current = stats.proteins,
-                    target = max(1, user.dailyProteins),
-                    emoji = "🍗",
-                    modifier = Modifier.weight(1f)
-                )
-                MacroCard(
-                    title = stringResource(R.string.fats_title),
-                    current = stats.fats,
-                    target = max(1, user.dailyFats),
-                    emoji = "🥑",
-                    modifier = Modifier.weight(1f)
-                )
-                MacroCard(
-                    title = stringResource(R.string.carbs_title),
-                    current = stats.carbs,
-                    target = max(1, user.dailyCarbs),
-                    emoji = "🍚",
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-        item {
-            Text(
-                "Сегодня",
-                color = Color(0xFF3E2723),
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+        Spacer(Modifier.height(24.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            MacroCard(
+                title = stringResource(R.string.protein_title),
+                current = stats.proteins,
+                target = max(1, user.dailyProteins),
+                emoji = "🍗",
+                modifier = Modifier.weight(1f)
+            )
+            MacroCard(
+                title = stringResource(R.string.fats_title),
+                current = stats.fats,
+                target = max(1, user.dailyFats),
+                emoji = "🥑",
+                modifier = Modifier.weight(1f)
+            )
+            MacroCard(
+                title = stringResource(R.string.carbs_title),
+                current = stats.carbs,
+                target = max(1, user.dailyCarbs),
+                emoji = "🍚",
+                modifier = Modifier.weight(1f)
             )
         }
-        if (entries.isEmpty()) {
-            item {
-                Text(
-                    "Пока пусто — добавьте продукт 👇",
-                    color = Color(0xFF5D4037),
-                    modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-                )
-            }
-        } else {
-            items(entries, key = { it.id }) { e ->
-                FoodEntryRow(
-                    entry = e,
-                    onDelete = {
-                        DailyStatsStorage.removeEntry(ctx, e.id)
-                        // обновим состояние списка и сумм
-                        entries = DailyStatsStorage.getEntries(ctx)
-                        stats = DailyStatsStorage.get(ctx)
-                    }
-                )
-            }
+        Spacer(Modifier.height(20.dp))
+        Button(
+            onClick = { showSheet = true },
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+        ) {
+            Text(stringResource(R.string.add_food), color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
-        item {
-            Button(
-                onClick = { showSheet = true },
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107)),
+        Spacer(Modifier.height(12.dp))
+        Text(
+            stringResource(R.string.today_title),
+            color = Color(0xFF3E2723),
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            modifier = Modifier
+                .align(Alignment.Start)
+                .padding(start = 4.dp)
+        )
+        Spacer(Modifier.height(4.dp))
+        if (entries.isEmpty()) {
+            Text(
+                stringResource(R.string.today_empty),
+                color = Color(0xFF5D4037),
+                modifier = Modifier
+                    .align(Alignment.Start)
+                    .padding(start = 4.dp)
+            )
+        } else {
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .weight(1f),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(stringResource(R.string.add_food), color = Color.Black, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                items(entries, key = { it.id }) { e ->
+                    FoodEntryRow(
+                        entry = e,
+                        onDelete = {
+                            DailyStatsStorage.removeEntry(ctx, e.id)
+                            entries = DailyStatsStorage.getEntries(ctx)
+                            stats = DailyStatsStorage.get(ctx)
+                        }
+                    )
+                }
             }
         }
-        item { Spacer(Modifier.height(8.dp)) }
+        Spacer(Modifier.height(12.dp))
     }
 
     if (showSheet) {
         AddFoodSheet(
             onClose = { showSheet = false },
-            onSave = { name, cal, p, f, c ->
-                DailyStatsStorage.addEntry(ctx, name, cal, p, f, c)
-                // обновим экран
+            onSave = { name, calPer100, pPer100, fPer100, cPer100, qtyG ->
+                DailyStatsStorage.addEntry(ctx, name, calPer100, pPer100, fPer100, cPer100, qtyG)
                 entries = DailyStatsStorage.getEntries(ctx)
                 stats = DailyStatsStorage.get(ctx)
                 showSheet = false
@@ -1110,10 +1106,16 @@ fun FoodEntryRow(entry: FoodEntry, onDelete: () -> Unit) {
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(entry.name, fontWeight = FontWeight.SemiBold, color = Color(0xFF3E2723))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(entry.name, fontWeight = FontWeight.SemiBold, color = Color(0xFF3E2723))
+                    if (entry.quantityGrams > 0) {
+                        Spacer(Modifier.width(8.dp))
+                        Text("${entry.quantityGrams} g", color = Color(0xFF5D4037), fontSize = 12.sp)
+                    }
+                }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Ккал: ${entry.calories} · Б: ${entry.proteins} · Ж: ${entry.fats} · У: ${entry.carbs}",
+                    stringResource(R.string.entry_macros, entry.calories, entry.proteins, entry.fats, entry.carbs),
                     color = Color(0xFF5D4037),
                     fontSize = 13.sp
                 )
@@ -1127,14 +1129,12 @@ fun FoodEntryRow(entry: FoodEntry, onDelete: () -> Unit) {
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Text("Удалить", fontSize = 12.sp)
+                    Text(stringResource(R.string.delete), fontSize = 12.sp)
                 }
             }
         }
     }
 }
-
-/* ====== Отрисовки и диалоги ====== */
 
 @Composable
 fun CalorieRing(
@@ -1144,7 +1144,6 @@ fun CalorieRing(
     stroke: Dp
 ) {
     val clamped = progress.coerceIn(0f, 1f)
-
     Box(
         modifier = Modifier.size(diameter),
         contentAlignment = Alignment.Center
@@ -1214,13 +1213,18 @@ fun MacroCard(title: String, current: Int, target: Int, emoji: String, modifier:
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddFoodSheet(onClose: () -> Unit, onSave: (name: String, cal: Int, p: Int, f: Int, c: Int) -> Unit) {
+fun AddFoodSheet(
+    onClose: () -> Unit,
+    onSave: (name: String, calPer100: Int, pPer100: Int, fPer100: Int, cPer100: Int, qtyG: Int) -> Unit
+) {
     var name by remember { mutableStateOf("") }
     var cal by remember { mutableStateOf("") }
     var p by remember { mutableStateOf("") }
     var f by remember { mutableStateOf("") }
     var c by remember { mutableStateOf("") }
+    var qty by remember { mutableStateOf("") }
     val onlyDigits: (String) -> String = { it.filter { ch -> ch.isDigit() } }
+    val valid = cal.isNotBlank() && p.isNotBlank() && f.isNotBlank() && c.isNotBlank() && qty.isNotBlank()
 
     ModalBottomSheet(
         onDismissRequest = onClose,
@@ -1236,11 +1240,13 @@ fun AddFoodSheet(onClose: () -> Unit, onSave: (name: String, cal: Int, p: Int, f
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(stringResource(R.string.add_food), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
+            Text(stringResource(R.string.per100_note), color = Color(0xFF5D4037), fontSize = 12.sp)
+            Spacer(Modifier.height(14.dp))
 
             OutlinedTextField(
                 value = name, onValueChange = { name = it },
-                label = { Text("Название продукта") },
+                label = { Text(stringResource(R.string.food_name_hint)) },
                 singleLine = true, modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(10.dp))
@@ -1268,6 +1274,13 @@ fun AddFoodSheet(onClose: () -> Unit, onSave: (name: String, cal: Int, p: Int, f
                 label = { Text(stringResource(R.string.carbs_g)) },
                 singleLine = true, modifier = Modifier.fillMaxWidth()
             )
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(
+                value = qty, onValueChange = { qty = onlyDigits(it) },
+                label = { Text(stringResource(R.string.quantity_g)) },
+                singleLine = true, modifier = Modifier.fillMaxWidth()
+            )
+
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
@@ -1281,8 +1294,10 @@ fun AddFoodSheet(onClose: () -> Unit, onSave: (name: String, cal: Int, p: Int, f
                         val pI = p.toIntOrNull() ?: 0
                         val fI = f.toIntOrNull() ?: 0
                         val cI = c.toIntOrNull() ?: 0
-                        onSave(name, calI, pI, fI, cI)
+                        val qtyI = qty.toIntOrNull() ?: 0
+                        onSave(name, calI, pI, fI, cI, qtyI)
                     },
+                    enabled = valid,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107))
@@ -1329,7 +1344,7 @@ fun SettingTile(title: String, subtitle: String, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFFFF3E0),
+        color = Color(0xFFFFE082),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(16.dp)) {
@@ -1360,9 +1375,10 @@ fun KbjuSettingsEntryScreen(onYesEnter: () -> Unit, onNoCalculate: () -> Unit) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(24.dp)
+                    .padding(top = 100.dp)
                     .padding(bottom = BottomContinueReservedSpace),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Top
             ) {
                 Text(
                     text = stringResource(R.string.kbju_settings_entry_title),
@@ -1392,18 +1408,9 @@ fun LanguageSettingsScreen(current: String, onSelect: (String) -> Unit) {
             ) {
                 Text(stringResource(R.string.language_settings_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
                 Spacer(Modifier.height(24.dp))
-                LanguageButton(
-                    text = "🇬🇧 " + stringResource(R.string.english),
-                    isSelected = current == "en"
-                ) { onSelect("en") }
-                LanguageButton(
-                    text = "🇷🇺 " + stringResource(R.string.russian),
-                    isSelected = current == "ru"
-                ) { onSelect("ru") }
-                LanguageButton(
-                    text = "🇵🇱 " + stringResource(R.string.polish),
-                    isSelected = current == "pl"
-                ) { onSelect("pl") }
+                LanguageButton(text = "🇬🇧 " + stringResource(R.string.english), isSelected = current == "en") { onSelect("en") }
+                LanguageButton(text = "🇷🇺 " + stringResource(R.string.russian), isSelected = current == "ru") { onSelect("ru") }
+                LanguageButton(text = "🇵🇱 " + stringResource(R.string.polish), isSelected = current == "pl") { onSelect("pl") }
             }
         }
     }
@@ -1418,7 +1425,6 @@ fun calculateKbju(
     } else {
         10 * weight + 6.25f * height - 5 * age - 161
     }
-
     val activityMult = when (activity) {
         "sedentary" -> 1.2f
         "light" -> 1.375f
@@ -1427,7 +1433,6 @@ fun calculateKbju(
         "very_high" -> 1.9f
         else -> 1.2f
     }
-
     var calories = (bmr * activityMult).roundToInt()
     calories = when (goal) {
         "lose" -> (calories * 0.85f).roundToInt()
@@ -1435,19 +1440,16 @@ fun calculateKbju(
         else -> calories
     }
     calories = max(calories, 1200)
-
     val proteinPerKg = when (goal) {
         "gain" -> 1.8f
         "lose" -> 1.8f
         else -> 1.6f
     }
     val fatPerKg = 0.8f
-
     val proteinsG = (weight * proteinPerKg).roundToInt()
     val fatsG = (weight * fatPerKg).roundToInt()
     val kcalFromPF = proteinsG * 4 + fatsG * 9
     val carbsG = max(0, ((calories - kcalFromPF) / 4f).roundToInt())
-
     return UserData(
         gender = gender,
         age = age,
@@ -1462,29 +1464,22 @@ fun calculateKbju(
     )
 }
 
-/* ================= Root ================= */
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
         val langCode = prefs.getString("language", "en") ?: "en"
         setLocale(this, langCode, restartActivity = false)
-
         val onboardingCompleted = UserStorage.isOnboardingCompleted(this)
         val activity = this@MainActivity
-
         setContent {
             TrackerControlTheme {
                 var currentScreen by remember { mutableStateOf(if (onboardingCompleted) "main" else "language") }
-
                 var calc by remember { mutableStateOf(CalcState()) }
                 var calcPlainStyle by remember { mutableStateOf(false) }
                 var calcResult by remember { mutableStateOf<UserData?>(null) }
                 var calcMode by remember { mutableStateOf("onboarding") }
-
                 Crossfade(targetState = currentScreen, label = "root") { screen ->
                     when (screen) {
                         "language" -> LanguageSelectionScreen(
@@ -1532,12 +1527,10 @@ class MainActivity : ComponentActivity() {
                                 plainStyle = true
                             )
                         }
-
                         "main" -> MainHost(
                             onEditKbju = { currentScreen = "kbjuSettingsEntry" },
                             onChangeLanguage = { currentScreen = "languageSettings" }
                         )
-
                         "kbjuSettingsEntry" -> KbjuSettingsEntryScreen(
                             onYesEnter = { currentScreen = "kbjuInputMain" },
                             onNoCalculate = {
@@ -1547,7 +1540,6 @@ class MainActivity : ComponentActivity() {
                                 currentScreen = "calc_gender"
                             }
                         )
-
                         "kbjuInput" -> {
                             val user = UserStorage.loadUser(activity)
                             KbjuInputScreen(
@@ -1569,11 +1561,9 @@ class MainActivity : ComponentActivity() {
                                 plainStyle = false
                             )
                         }
-
                         "languageSettings" -> LanguageSettingsScreen(current = langCode) { code ->
                             setLocale(activity, code, restartActivity = true)
                         }
-
                         "calc_gender" -> CalcGenderScreen(
                             plainStyle = calcPlainStyle,
                             value = calc.gender,
@@ -1645,8 +1635,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-/* ===== Preview ===== */
 
 @Preview(showBackground = true)
 @Composable

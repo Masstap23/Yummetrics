@@ -1,73 +1,83 @@
 <resources>
-    <string name="kcal_left">ккал осталось</string>
     <string name="app_name">Yummetrics</string>
-    <string name="protein_title">Белки</string>
-    <string name="fats_title">Жиры</string>
-    <string name="carbs_title">Углеводы</string>
-    <string name="add_food">Добавить продукт</string>
-    <string name="button_cancel">Отмена</string>
-    <string name="button_add">Добавить</string>
-    <string name="tab_home">Главная</string>
-    <string name="tab_charts">Графики</string>
-    <string name="tab_settings">Настройки</string>
-    <string name="settings_language">Язык</string>
-    <string name="settings_language_sub">Сменить язык приложения</string>
-    <string name="settings_kbju">Дневные нормы</string>
-    <string name="settings_kbju_sub">Изменить КБЖУ</string>
-    <string name="settings_reset_now">Сбросить за сегодня</string>
-    <string name="settings_reset_now_sub">Обнулить съеденное сейчас</string>
-    <string name="charts_stub">Графики скоро появятся</string>
 
-    <!-- onboarding -->
     <string name="welcome_title">Добро пожаловать</string>
     <string name="choose_language">Выберите язык</string>
     <string name="english">Английский</string>
     <string name="russian">Русский</string>
     <string name="polish">Польский</string>
     <string name="button_continue">Продолжить</string>
-    <string name="ask_name">Как вас зовут?</string>
-    <string name="name_hint">Ваше имя</string>
-    <string name="hello_name">Привет, %1$s!</string>
-    <string name="kbju_question">Знаете ли вы свою дневную норму КБЖУ (калории, белки, жиры, углеводы)?</string>
+
+    <string name="ask_name">Как тебя зовут?</string>
+    <string name="name_hint">Введите имя</string>
+
+    <string name="hello_name">Привет, %1$s</string>
+    <string name="kbju_question">Знаешь ли ты свой дневной КБЖУ?</string>
     <string name="kbju_yes_enter">Да, ввести значения</string>
-    <string name="kbju_no_calculate">Нет, рассчитать для меня</string>
-    <string name="kbju_title">Ваша дневная норма КБЖУ</string>
-    <string name="calories_kcal">Калории (ккал)</string>
-    <string name="proteins_g">Белки (г)</string>
-    <string name="fats_g">Жиры (г)</string>
-    <string name="carbs_g">Углеводы (г)</string>
-    <string name="button_finish">Готово</string>
+    <string name="kbju_no_calculate">Нет, рассчитай для меня</string>
 
-    <!-- bottom sheet -->
-    <string name="add_food_name_hint">Название блюда</string>
+    <string name="kbju_title">Введи свою дневную норму</string>
+    <string name="calories_kcal">Калории, ккал</string>
+    <string name="proteins_g">Белки, г</string>
+    <string name="fats_g">Жиры, г</string>
+    <string name="carbs_g">Углеводы, г</string>
+    <string name="quantity_g">Количество, г</string>
+    <string name="per100_note">Значения ниже указаны на 100 г</string>
+    <string name="button_finish">Закончить</string>
+    <string name="button_cancel">Отмена</string>
+    <string name="button_save">Сохранить</string>
+    <string name="button_add">Добавить</string>
+    <string name="button_thanks">Спасибо!</string>
 
-    <!-- settings flows -->
-    <string name="kbju_settings_entry_title">Знаете ли вы свою дневную норму КБЖУ?</string>
+    <string name="tab_home">Главная</string>
+    <string name="tab_charts">Графики</string>
+    <string name="tab_settings">Настройки</string>
+
+    <string name="protein_title">Белки</string>
+    <string name="fats_title">Жиры</string>
+    <string name="carbs_title">Углеводы</string>
+    <string name="kcal_left">осталось ккал</string>
+    <string name="charts_stub">Здесь будут графики</string>
+
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_sub">Сменить язык приложения</string>
+    <string name="settings_kbju">Дневная норма</string>
+    <string name="settings_kbju_sub">Изменить КБЖУ</string>
+    <string name="settings_reset_now">Сбросить сегодня</string>
+    <string name="settings_reset_now_sub">Сброс сумм и записей за сегодня</string>
+
+    <string name="kbju_settings_entry_title">Как хотите изменить дневную норму?</string>
     <string name="language_settings_title">Выберите язык</string>
 
-    <!-- calculator steps -->
     <string name="calc_gender_title">Выберите пол</string>
-    <string name="gender_male">Мужской</string>
-    <string name="gender_female">Женский</string>
+    <string name="gender_male">Мужчина</string>
+    <string name="gender_female">Женщина</string>
     <string name="calc_stats_title">Введите параметры</string>
-    <string name="weight_kg">Вес (кг)</string>
-    <string name="height_cm">Рост (см)</string>
-    <string name="age_years">Возраст (лет)</string>
+    <string name="weight_kg">Вес, кг</string>
+    <string name="height_cm">Рост, см</string>
+    <string name="age_years">Возраст, лет</string>
     <string name="calc_activity_title">Физическая активность</string>
     <string name="activity_sedentary">Минимальная</string>
+    <string name="activity_sedentary_desc">Нет или почти нет тренировок</string>
     <string name="activity_light">Низкая</string>
+    <string name="activity_light_desc">1–3 тренировки в неделю</string>
     <string name="activity_moderate">Средняя</string>
+    <string name="activity_moderate_desc">3–5 тренировок в неделю</string>
     <string name="activity_high">Высокая</string>
+    <string name="activity_high_desc">6–7 тренировок в неделю</string>
     <string name="activity_very_high">Очень высокая</string>
-    <string name="activity_sedentary_desc">Мало или нет тренировок</string>
-    <string name="activity_light_desc">Лёгкая активность 1–3 раза/нед</string>
-    <string name="activity_moderate_desc">Умеренная активность 3–5 раз/нед</string>
-    <string name="activity_high_desc">Интенсивно 6–7 раз/нед</string>
-    <string name="activity_very_high_desc">Очень интенсивно / физический труд</string>
-    <string name="calc_goal_title">Ваша цель</string>
+    <string name="activity_very_high_desc">Тяжёлый труд или 2 раза в день</string>
+    <string name="calc_goal_title">Цель</string>
     <string name="goal_lose">Похудение</string>
-    <string name="goal_maintain">Поддержание</string>
+    <string name="goal_maintain">Поддержание веса</string>
     <string name="goal_gain">Набор веса</string>
-    <string name="calc_result_title">Рассчитанные нормы на день</string>
-    <string name="button_thanks">Спасибо!</string>
+    <string name="calc_result_title">Твоя дневная норма</string>
+
+    <string name="add_food">Добавить продукт</string>
+    <string name="food_name_hint">Название продукта</string>
+    <string name="food_name_default">Без названия</string>
+    <string name="today_title">Сегодня</string>
+    <string name="today_empty">Пока пусто — добавьте продукт 👇</string>
+    <string name="delete">Удалить</string>
+    <string name="entry_macros">Ккал: %1$d · Б: %2$d · Ж: %3$d · У: %4$d</string>
 </resources>

@@ -42,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
@@ -60,8 +59,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import kotlin.math.ceil
-import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -1519,7 +1516,7 @@ fun ChartsScreen() {
 
     val dateFmt = remember { SimpleDateFormat("dd.MM", Locale.getDefault()) }
 
-    val weightPoints = remember(weights) { weights.takeLast(14) } // последние 14 дней
+    val weightPoints = remember(weights) { weights.takeLast(14) }
     val weightValues = remember(weightPoints) { weightPoints.map { it.second } }
     val weightLabels = remember(weightPoints) { weightPoints.map { dateFmt.format(Date(it.first)) } }
 
@@ -1573,7 +1570,14 @@ fun ChartsScreen() {
                 if (weightValues.isEmpty()) {
                     Text(stringResource(R.string.no_data), color = Color(0xFF5D4037))
                 } else {
-                    LineChart(values = weightValues, xLabels = weightLabels, height = 220.dp, stroke = 3.dp)
+                    LineChart(
+                        values = weightValues,
+                        xLabels = weightLabels,
+                        height = 220.dp,
+                        stroke = 3.dp,
+                        yTicks = 5,
+                        formatY = { v -> String.format(Locale.getDefault(), "%.1f", v) }
+                    )
                 }
             }
 
@@ -1581,7 +1585,7 @@ fun ChartsScreen() {
                 if (calValues.isEmpty()) {
                     Text(stringResource(R.string.no_data), color = Color(0xFF5D4037))
                 } else {
-                    LineChart(values = calValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp)
+                    LineChart(values = calValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp, yTicks = 4)
                 }
             }
 
@@ -1589,7 +1593,7 @@ fun ChartsScreen() {
                 if (protValues.isEmpty()) {
                     Text(stringResource(R.string.no_data), color = Color(0xFF5D4037))
                 } else {
-                    LineChart(values = protValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp)
+                    LineChart(values = protValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp, yTicks = 4)
                 }
             }
 
@@ -1597,7 +1601,7 @@ fun ChartsScreen() {
                 if (fatValues.isEmpty()) {
                     Text(stringResource(R.string.no_data), color = Color(0xFF5D4037))
                 } else {
-                    LineChart(values = fatValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp)
+                    LineChart(values = fatValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp, yTicks = 4)
                 }
             }
 
@@ -1605,11 +1609,11 @@ fun ChartsScreen() {
                 if (carbValues.isEmpty()) {
                     Text(stringResource(R.string.no_data), color = Color(0xFF5D4037))
                 } else {
-                    LineChart(values = carbValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp)
+                    LineChart(values = carbValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp, yTicks = 4)
                 }
             }
 
-            Spacer(Modifier.height(84.dp)) // запас под нижнюю кнопку
+            Spacer(Modifier.height(84.dp))
         }
     }
 
@@ -1624,6 +1628,7 @@ fun ChartsScreen() {
         )
     }
 }
+
 object WeightStorage {
     private const val PREFS = "weight_stats"
     private const val KEY = "weights_json"
@@ -1694,12 +1699,15 @@ fun ChartCard(
     }
 }
 
+/* >>> Новая версия LineChart с осями слева <<< */
 @Composable
 fun LineChart(
     values: List<Float>,
     xLabels: List<String>,
     height: Dp,
-    stroke: Dp
+    stroke: Dp,
+    yTicks: Int = 4,
+    formatY: (Float) -> String = { it.roundToInt().toString() }
 ) {
     if (values.isEmpty()) {
         Box(
@@ -1719,65 +1727,96 @@ fun LineChart(
     val vMin = minV - pad
     val vMax = maxV + pad
 
-    Column(Modifier.fillMaxWidth()) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(height)
-        ) {
-            val w = size.width
-            val h = size.height
-            val gridColor = Color(0xFFFFE0B2)
-            val strokePx = stroke.toPx()
+    val axisWidth = 48.dp
+    val axisGap = 6.dp
+    val gridColor = Color(0xFFFFE0B2)
+    val lineColor = Color(0xFFFFA000)
+    val pointColor = Color(0xFFFFC107)
 
-            val gridLines = 4
-            for (i in 0..gridLines) {
-                val y = h * (i / gridLines.toFloat())
-                drawLine(
-                    color = gridColor,
-                    start = androidx.compose.ui.geometry.Offset(0f, y),
-                    end = androidx.compose.ui.geometry.Offset(w, y),
-                    strokeWidth = 1.dp.toPx()
-                )
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .width(axisWidth)
+                    .height(height),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.End
+            ) {
+                val ticks = (0..yTicks).map { i ->
+                    val frac = i / yTicks.toFloat() // 0..1
+                    val value = vMin + (vMax - vMin) * (1f - frac) // сверху vMax
+                    formatY(value)
+                }
+                ticks.forEach { label ->
+                    Text(label, color = Color(0xFF5D4037), fontSize = 10.sp)
+                }
             }
 
-            if (values.size == 1) {
-                val yRatio = if ((vMax - vMin) == 0f) 0.5f else (values[0] - vMin) / (vMax - vMin)
-                val y = h * (1f - yRatio)
-                drawLine(
-                    color = Color(0xFFFFA000),
-                    start = androidx.compose.ui.geometry.Offset(0f, y),
-                    end = androidx.compose.ui.geometry.Offset(w, y),
-                    strokeWidth = strokePx,
-                    cap = StrokeCap.Round
-                )
-            } else {
-                var prev: androidx.compose.ui.geometry.Offset? = null
-                values.forEachIndexed { i, v ->
-                    val x = i / (values.lastIndex.toFloat()) * w
-                    val yRatio = if ((vMax - vMin) == 0f) 0.5f else (v - vMin) / (vMax - vMin)
+            Spacer(Modifier.width(axisGap))
+
+            Canvas(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(height)
+            ) {
+                val w = size.width
+                val h = size.height
+                val strokePx = stroke.toPx()
+
+                // горизонтальные линии сетки
+                for (i in 0..yTicks) {
+                    val y = h * (i / yTicks.toFloat())
+                    drawLine(
+                        color = gridColor,
+                        start = androidx.compose.ui.geometry.Offset(0f, y),
+                        end = androidx.compose.ui.geometry.Offset(w, y),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
+
+                if (values.size == 1) {
+                    val yRatio = if ((vMax - vMin) == 0f) 0.5f else (values[0] - vMin) / (vMax - vMin)
                     val y = h * (1f - yRatio)
-                    val pt = androidx.compose.ui.geometry.Offset(x, y)
-                    if (prev != null) {
-                        drawLine(
-                            color = Color(0xFFFFA000),
-                            start = prev!!,
-                            end = pt,
-                            strokeWidth = strokePx,
-                            cap = StrokeCap.Round
+                    drawLine(
+                        color = lineColor,
+                        start = androidx.compose.ui.geometry.Offset(0f, y),
+                        end = androidx.compose.ui.geometry.Offset(w, y),
+                        strokeWidth = strokePx,
+                        cap = StrokeCap.Round
+                    )
+                    drawCircle(
+                        color = pointColor,
+                        radius = strokePx * 1.1f,
+                        center = androidx.compose.ui.geometry.Offset(w / 2f, y)
+                    )
+                } else {
+                    var prev: androidx.compose.ui.geometry.Offset? = null
+                    values.forEachIndexed { i, v ->
+                        val x = i / (values.lastIndex.toFloat()) * w
+                        val yRatio = if ((vMax - vMin) == 0f) 0.5f else (v - vMin) / (vMax - vMin)
+                        val y = h * (1f - yRatio)
+                        val pt = androidx.compose.ui.geometry.Offset(x, y)
+                        if (prev != null) {
+                            drawLine(
+                                color = lineColor,
+                                start = prev!!,
+                                end = pt,
+                                strokeWidth = strokePx,
+                                cap = StrokeCap.Round
+                            )
+                        }
+                        prev = pt
+                    }
+                    values.forEachIndexed { i, v ->
+                        val x = i / (values.lastIndex.toFloat()) * w
+                        val yRatio = if ((vMax - vMin) == 0f) 0.5f else (v - vMin) / (vMax - vMin)
+                        val y = h * (1f - yRatio)
+                        drawCircle(
+                            color = pointColor,
+                            radius = strokePx * 1.1f,
+                            center = androidx.compose.ui.geometry.Offset(x, y)
                         )
                     }
-                    prev = pt
-                }
-                values.forEachIndexed { i, v ->
-                    val x = i / (values.lastIndex.toFloat()) * w
-                    val yRatio = if ((vMax - vMin) == 0f) 0.5f else (v - vMin) / (vMax - vMin)
-                    val y = h * (1f - yRatio)
-                    drawCircle(
-                        color = Color(0xFFFFC107),
-                        radius = strokePx * 1.1f,
-                        center = androidx.compose.ui.geometry.Offset(x, y)
-                    )
                 }
             }
         }
@@ -1786,10 +1825,16 @@ fun LineChart(
             Spacer(Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.Start
             ) {
-                xLabels.forEach { lbl ->
-                    Text(lbl, color = Color(0xFF5D4037), fontSize = 10.sp)
+                Spacer(Modifier.width(axisWidth + axisGap))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = if (xLabels.size > 1) Arrangement.SpaceBetween else Arrangement.Start
+                ) {
+                    xLabels.forEach { lbl ->
+                        Text(lbl, color = Color(0xFF5D4037), fontSize = 10.sp)
+                    }
                 }
             }
         }

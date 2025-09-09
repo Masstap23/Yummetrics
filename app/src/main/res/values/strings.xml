@@ -4,8 +4,8 @@
     <string name="welcome_title">Welcome</string>
     <string name="choose_language">Choose your language</string>
     <string name="english">English</string>
-    <string name="russian">Russian</string>
-    <string name="polish">Polish</string>
+    <string name="russian">Русский</string>
+    <string name="polish">Polski</string>
     <string name="button_continue">Continue</string>
 
     <string name="ask_name">What is your name?</string>

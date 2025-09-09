@@ -3,8 +3,8 @@
 
     <string name="welcome_title">Witamy</string>
     <string name="choose_language">Wybierz język</string>
-    <string name="english">Angielski</string>
-    <string name="russian">Rosyjski</string>
+    <string name="english">English</string>
+    <string name="russian">Русский</string>
     <string name="polish">Polski</string>
     <string name="button_continue">Dalej</string>
 

@@ -413,7 +413,7 @@ fun LanguageButton(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isSelected) Color(0xFFFFB300) else Color(0xFFFFE082)
+    val backgroundColor = if (isSelected) Color(0xFFFFB300) else Color(0xFFFFCA28)
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -441,7 +441,7 @@ fun SelectableCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val bg = if (selected) Color(0xFFFFB300) else Color(0xFFFFE082)
+    val bg = if (selected) Color(0xFFFFB300) else Color(0xFFFFCA28)
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
@@ -459,6 +459,7 @@ fun SelectableCard(
         }
     }
 }
+
 
 @Composable
 fun LanguageSelectionScreen(
@@ -575,7 +576,7 @@ fun KbjuQuestionScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(24.dp)
-                    .padding(top = 100.dp)
+                    .padding(top = 180.dp)  // было 100dp — опустил ниже
                     .padding(bottom = BottomContinueReservedSpace),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top
@@ -602,6 +603,7 @@ fun KbjuQuestionScreen(
         }
     }
 }
+
 
 @Composable
 fun KbjuInputScreen(

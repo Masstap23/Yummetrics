@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -37,6 +38,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +57,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.example.Yummetrics.ui.theme.TrackerControlTheme
+import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -62,8 +69,24 @@ import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-import org.json.JSONArray
-import org.json.JSONObject
+
+/* ---------------------- Цвета полей ввода: чёрный текст ---------------------- */
+
+@Composable
+fun YumTextFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = Color.Black,
+    unfocusedTextColor = Color.Black,
+    disabledTextColor = Color.Black.copy(alpha = 0.6f),
+    cursorColor = Color(0xFF3E2723),
+    focusedBorderColor = Color(0xFF3E2723),
+    unfocusedBorderColor = Color(0xFF8D6E63),
+    focusedLabelColor = Color(0xFF3E2723),
+    unfocusedLabelColor = Color(0xFF5D4037),
+    focusedContainerColor = Color.Transparent,
+    unfocusedContainerColor = Color.Transparent
+)
+
+/* ---------------------- Локаль ---------------------- */
 
 fun setLocale(activity: ComponentActivity, langCode: String, restartActivity: Boolean = false) {
     val locale = Locale(langCode)
@@ -78,6 +101,8 @@ fun setLocale(activity: ComponentActivity, langCode: String, restartActivity: Bo
         if (restartActivity) activity.recreate()
     }
 }
+
+/* ---------------------- Модели ---------------------- */
 
 data class UserData(
     val name: String = "",
@@ -103,6 +128,8 @@ data class FoodEntry(
     val quantityGrams: Int,
     val ts: Long = System.currentTimeMillis()
 )
+
+/* ---------------------- Хранилища ---------------------- */
 
 object UserStorage {
     private const val PREFS_NAME = "user_prefs"
@@ -153,6 +180,8 @@ object UserStorage {
 }
 
 data class DayStats(val calories: Int = 0, val proteins: Int = 0, val fats: Int = 0, val carbs: Int = 0)
+
+/* ===== История для графиков ===== */
 
 data class DayTotals(
     val dateKey: String,
@@ -297,6 +326,8 @@ object HistoryStorage {
         return if (sorted.size <= days) sorted else sorted.takeLast(days)
     }
 }
+
+/* ===== Текущая статистика дня и ночной сброс ===== */
 
 object DailyStatsStorage {
     private const val PREFS = "daily_stats"
@@ -494,6 +525,8 @@ class DailyResetReceiver : BroadcastReceiver() {
     }
 }
 
+/* ---------------------- UI билдинги ---------------------- */
+
 @Composable
 fun AppHeader(text: String = "Yummetrics", modifier: Modifier = Modifier) {
     Box(
@@ -510,18 +543,25 @@ fun BackgroundScreen(content: @Composable BoxScope.() -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFFF8E1))
+            .background(Color(0xFFFFF8E1)) // запасной цвет фона, если картинка не загрузится
     ) {
-        val bgPainter = runCatching { painterResource(id = R.drawable.with_sun) }.getOrNull()
-        if (bgPainter != null) {
+        val bg = runCatching { painterResource(id = R.drawable.with_sun) }.getOrNull()
+        if (bg != null) {
             Image(
-                painter = bgPainter,
+                painter = bg,
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.matchParentSize(), // важно: во всю площадь, включая system bars
                 contentScale = ContentScale.Crop
             )
         }
-        content()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            content()
+        }
     }
 }
 
@@ -531,8 +571,18 @@ fun PlainScreen(content: @Composable BoxScope.() -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFFFF8E1))
-    ) { content() }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            content()
+        }
+    }
 }
+
 
 private val BottomContinueReservedSpace = 136.dp
 
@@ -615,6 +665,8 @@ fun SelectableCard(
         }
     }
 }
+
+/* ---------------------- Онбординг ---------------------- */
 
 @Composable
 fun LanguageSelectionScreen(
@@ -703,7 +755,8 @@ fun NameInputScreen(onNameEntered: (String) -> Unit) {
                     onValueChange = { name = it },
                     label = { Text(stringResource(R.string.name_hint)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = YumTextFieldColors()
                 )
             }
             BottomContinueButton(
@@ -759,6 +812,8 @@ fun KbjuQuestionScreen(
     }
 }
 
+/* ---------------------- Экран ручного ввода КБЖУ ---------------------- */
+
 @Composable
 fun KbjuInputScreen(
     initialCalories: Int,
@@ -808,7 +863,8 @@ fun KbjuInputScreen(
                     onValueChange = { calories = onlyDigits(it) },
                     label = { Text(stringResource(R.string.calories_kcal)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = YumTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
@@ -816,7 +872,8 @@ fun KbjuInputScreen(
                     onValueChange = { proteins = onlyDigits(it) },
                     label = { Text(stringResource(R.string.proteins_g)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = YumTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
@@ -824,7 +881,8 @@ fun KbjuInputScreen(
                     onValueChange = { fats = onlyDigits(it) },
                     label = { Text(stringResource(R.string.fats_g)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = YumTextFieldColors()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
@@ -832,7 +890,8 @@ fun KbjuInputScreen(
                     onValueChange = { carbs = onlyDigits(it) },
                     label = { Text(stringResource(R.string.carbs_g)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = YumTextFieldColors()
                 )
             }
             BottomContinueButton(
@@ -849,6 +908,8 @@ fun KbjuInputScreen(
         }
     }
 }
+
+/* ---------------------- Калькулятор КБЖУ (опрос) ---------------------- */
 
 data class CalcState(
     val gender: String? = null,
@@ -921,17 +982,20 @@ fun CalcStatsScreen(plainStyle: Boolean, weight: String, height: String, age: St
                 Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = weight, onValueChange = { onChange(onlyDigits(it), height, age) },
-                    label = { Text(stringResource(R.string.weight_kg)) }, singleLine = true, modifier = Modifier.fillMaxWidth()
+                    label = { Text(stringResource(R.string.weight_kg)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    colors = YumTextFieldColors()
                 )
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = height, onValueChange = { onChange(weight, onlyDigits(it), age) },
-                    label = { Text(stringResource(R.string.height_cm)) }, singleLine = true, modifier = Modifier.fillMaxWidth()
+                    label = { Text(stringResource(R.string.height_cm)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    colors = YumTextFieldColors()
                 )
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = age, onValueChange = { onChange(weight, height, onlyDigits(it)) },
-                    label = { Text(stringResource(R.string.age_years)) }, singleLine = true, modifier = Modifier.fillMaxWidth()
+                    label = { Text(stringResource(R.string.age_years)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    colors = YumTextFieldColors()
                 )
             }
             BottomContinueButton(enabled = true, onClick = { if (valid) onNext() })
@@ -954,14 +1018,22 @@ fun CalcActivityScreen(plainStyle: Boolean, value: String?, onSelect: (String) -
                 )
             }
             Column(
-                Modifier
+                modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp)
-                    .padding(top = if (plainStyle) 80.dp else 160.dp)
+                    .padding(horizontal = 24.dp)
+                    .padding(top = if (plainStyle) 24.dp else 24.dp) // меньше фиксированных отступов
                     .padding(bottom = BottomContinueReservedSpace)
+                    .verticalScroll(rememberScrollState()), // <<< прокрутка
             ) {
-                Text(stringResource(R.string.calc_activity_title), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723), textAlign = TextAlign.Center)
+                Text(
+                    stringResource(R.string.calc_activity_title),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3E2723),
+                    textAlign = TextAlign.Center
+                )
                 Spacer(Modifier.height(12.dp))
+
                 SelectableCard(
                     title = stringResource(R.string.activity_sedentary),
                     subtitle = stringResource(R.string.activity_sedentary_desc),
@@ -992,11 +1064,13 @@ fun CalcActivityScreen(plainStyle: Boolean, value: String?, onSelect: (String) -
                     selected = value == "very_high",
                     onClick = { onSelect("very_high") }
                 )
+                Spacer(Modifier.height(8.dp))
             }
             BottomContinueButton(enabled = true, onClick = { if (value != null) onNext() })
         }
     }
 }
+
 
 @Composable
 fun CalcGoalScreen(plainStyle: Boolean, value: String?, onSelect: (String) -> Unit, onNext: () -> Unit) {
@@ -1072,6 +1146,8 @@ fun CalcResultScreen(
         }
     }
 }
+
+/* ---------------------- Главная, графики, настройки ---------------------- */
 
 @Composable
 fun MainHost(onEditKbju: () -> Unit, onChangeLanguage: () -> Unit) {
@@ -1367,6 +1443,8 @@ fun MacroCard(title: String, current: Int, target: Int, emoji: String, modifier:
     }
 }
 
+/* ---------------------- SHEET: Добавление продукта ---------------------- */
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddFoodSheet(
@@ -1403,38 +1481,44 @@ fun AddFoodSheet(
             OutlinedTextField(
                 value = name, onValueChange = { name = it },
                 label = { Text(stringResource(R.string.food_name_hint)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth()
+                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                colors = YumTextFieldColors()
             )
             Spacer(Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = cal, onValueChange = { cal = onlyDigits(it) },
                 label = { Text(stringResource(R.string.calories_kcal)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth()
+                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                colors = YumTextFieldColors()
             )
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = p, onValueChange = { p = onlyDigits(it) },
                 label = { Text(stringResource(R.string.proteins_g)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth()
+                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                colors = YumTextFieldColors()
             )
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = f, onValueChange = { f = onlyDigits(it) },
                 label = { Text(stringResource(R.string.fats_g)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth()
+                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                colors = YumTextFieldColors()
             )
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = c, onValueChange = { c = onlyDigits(it) },
                 label = { Text(stringResource(R.string.carbs_g)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth()
+                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                colors = YumTextFieldColors()
             )
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = qty, onValueChange = { qty = onlyDigits(it) },
                 label = { Text(stringResource(R.string.quantity_g)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth()
+                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                colors = YumTextFieldColors()
             )
 
             Spacer(Modifier.height(16.dp))
@@ -1463,6 +1547,8 @@ fun AddFoodSheet(
         }
     }
 }
+
+/* ---------------------- Настройки ---------------------- */
 
 @Composable
 fun SettingsRoot(onEditKbju: () -> Unit, onChangeLanguage: () -> Unit) {
@@ -1511,6 +1597,8 @@ fun SettingTile(title: String, subtitle: String, onClick: () -> Unit) {
     }
 }
 
+/* ---------------------- Графики ---------------------- */
+
 enum class Metric { WEIGHT, CAL, PROT, FAT, CARB }
 
 @Composable
@@ -1522,7 +1610,7 @@ fun ChartsScreen() {
 
     val dateFmt = remember { SimpleDateFormat("dd.MM", Locale.getDefault()) }
 
-    val weightPoints = remember(weights) { weights.takeLast(14) }
+    val weightPoints = remember(weights) { weights.takeLast(14) } // последние 14 дней
     val weightValues = remember(weightPoints) { weightPoints.map { it.second } }
     val weightLabels = remember(weightPoints) { weightPoints.map { dateFmt.format(Date(it.first)) } }
 
@@ -1710,6 +1798,7 @@ fun ChartCard(
     }
 }
 
+/* >>> Линейный график с осями слева <<< */
 @Composable
 fun LineChart(
     values: List<Float>,
@@ -1753,8 +1842,8 @@ fun LineChart(
                 horizontalAlignment = Alignment.End
             ) {
                 val ticks = (0..yTicks).map { i ->
-                    val frac = i / yTicks.toFloat()
-                    val value = vMin + (vMax - vMin) * (1f - frac)
+                    val frac = i / yTicks.toFloat() // 0..1
+                    val value = vMin + (vMax - vMin) * (1f - frac) // сверху vMax
                     formatY(value)
                 }
                 ticks.forEach { label ->
@@ -1773,6 +1862,7 @@ fun LineChart(
                 val h = size.height
                 val strokePx = stroke.toPx()
 
+                // горизонтальные линии сетки
                 for (i in 0..yTicks) {
                     val y = h * (i / yTicks.toFloat())
                     drawLine(
@@ -1850,6 +1940,8 @@ fun LineChart(
     }
 }
 
+/* ---------------------- SHEET: Вес ---------------------- */
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddWeightSheet(
@@ -1893,7 +1985,8 @@ fun AddWeightSheet(
                 onValueChange = { kgText = onlyNum(it) },
                 label = { Text(stringResource(R.string.weight_kg)) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = YumTextFieldColors()
             )
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1917,6 +2010,8 @@ fun AddWeightSheet(
         }
     }
 }
+
+/* ---------------------- Языковые настройки ---------------------- */
 
 @Composable
 fun KbjuSettingsEntryScreen(onYesEnter: () -> Unit, onNoCalculate: () -> Unit) {
@@ -1967,6 +2062,8 @@ fun LanguageSettingsScreen(current: String, onSelect: (String) -> Unit) {
     }
 }
 
+/* ---------------------- Формулы КБЖУ ---------------------- */
+
 fun calculateKbju(
     gender: String, age: Int, height: Int, weight: Int,
     activity: String, goal: String
@@ -2015,15 +2112,33 @@ fun calculateKbju(
     )
 }
 
+/* ---------------------- Activity ---------------------- */
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        val cream = android.graphics.Color.parseColor("#FFF8E1")
+        if (Build.VERSION.SDK_INT >= 29) {
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        } else {
+            window.statusBarColor = cream
+            window.navigationBarColor = cream
+        }
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
+
         val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
         val langCode = prefs.getString("language", "en") ?: "en"
         setLocale(this, langCode, restartActivity = false)
         val onboardingCompleted = UserStorage.isOnboardingCompleted(this)
         val activity = this@MainActivity
+
         setContent {
             TrackerControlTheme {
                 var currentScreen by remember { mutableStateOf(if (onboardingCompleted) "main" else "language") }
@@ -2031,6 +2146,7 @@ class MainActivity : ComponentActivity() {
                 var calcPlainStyle by remember { mutableStateOf(false) }
                 var calcResult by remember { mutableStateOf<UserData?>(null) }
                 var calcMode by remember { mutableStateOf("onboarding") }
+
                 Crossfade(targetState = currentScreen, label = "root") { screen ->
                     when (screen) {
                         "language" -> LanguageSelectionScreen(
@@ -2186,6 +2302,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+/* ---------------------- Preview ---------------------- */
 
 @Preview(showBackground = true)
 @Composable

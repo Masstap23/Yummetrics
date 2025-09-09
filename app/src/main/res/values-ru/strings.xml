@@ -80,4 +80,12 @@
     <string name="today_empty">Пока пусто — добавьте продукт 👇</string>
     <string name="delete">Удалить</string>
     <string name="entry_macros">Ккал: %1$d · Б: %2$d · Ж: %3$d · У: %4$d</string>
+    <string name="charts_title_weight">Вес</string>
+    <string name="charts_title_calories">Калории</string>
+    <string name="charts_title_proteins">Белки</string>
+    <string name="charts_title_fats">Жиры</string>
+    <string name="charts_title_carbs">Углеводы</string>
+    <string name="add_weight">Добавить вес сегодня</string>
+    <string name="no_data">Пока нет данных</string>
+
 </resources>

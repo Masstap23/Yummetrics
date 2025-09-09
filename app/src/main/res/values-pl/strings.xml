@@ -80,4 +80,11 @@
     <string name="today_empty">Brak wpisów — dodaj produkt 👇</string>
     <string name="delete">Usuń</string>
     <string name="entry_macros">Kcal: %1$d · B: %2$d · T: %3$d · W: %4$d</string>
+    <string name="charts_title_weight">Waga</string>
+    <string name="charts_title_calories">Kalorie</string>
+    <string name="charts_title_proteins">Białko</string>
+    <string name="charts_title_fats">Tłuszcze</string>
+    <string name="charts_title_carbs">Węglowodany</string>
+    <string name="add_weight">Dodaj wagę dziś</string>
+    <string name="no_data">Brak danych</string>
 </resources>

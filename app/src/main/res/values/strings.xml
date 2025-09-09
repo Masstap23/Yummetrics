@@ -80,4 +80,12 @@
     <string name="today_empty">No entries yet — add a product 👇</string>
     <string name="delete">Delete</string>
     <string name="entry_macros">Kcal: %1$d · P: %2$d · F: %3$d · C: %4$d</string>
+    <string name="charts_title_weight">Weight</string>
+    <string name="charts_title_calories">Calories</string>
+    <string name="charts_title_proteins">Proteins</string>
+    <string name="charts_title_fats">Fats</string>
+    <string name="charts_title_carbs">Carbs</string>
+    <string name="add_weight">Add weight today</string>
+    <string name="no_data">No data yet</string>
+
 </resources>

@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
@@ -59,6 +60,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -154,6 +157,149 @@ object UserStorage {
 
 data class DayStats(val calories: Int = 0, val proteins: Int = 0, val fats: Int = 0, val carbs: Int = 0)
 
+/* ===== История для графиков ===== */
+
+data class DayTotals(
+    val dateKey: String,
+    val weight: Float? = null,
+    val calories: Int? = null,
+    val proteins: Int? = null,
+    val fats: Int? = null,
+    val carbs: Int? = null
+)
+
+object HistoryStorage {
+    private const val PREFS = "history_prefs"
+    private const val K_DAYS = "days_json"
+
+    private fun sdfKey(): SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private fun sdfLabel(): SimpleDateFormat = SimpleDateFormat("dd.MM", Locale.getDefault())
+
+    fun todayKey(): String = sdfKey().format(Date())
+
+    fun labelFromKey(key: String): String {
+        return try {
+            val date = sdfKey().parse(key)
+            if (date != null) sdfLabel().format(date) else key
+        } catch (_: Exception) { key }
+    }
+
+    fun getAll(context: Context): MutableList<DayTotals> {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val arrStr = p.getString(K_DAYS, "[]") ?: "[]"
+        val arr = JSONArray(arrStr)
+        val list = ArrayList<DayTotals>(arr.length())
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            list.add(
+                DayTotals(
+                    dateKey = o.getString("date"),
+                    weight = if (o.has("w") && !o.isNull("w")) o.getDouble("w").toFloat() else null,
+                    calories = if (o.has("cal") && !o.isNull("cal")) o.getInt("cal") else null,
+                    proteins = if (o.has("p") && !o.isNull("p")) o.getInt("p") else null,
+                    fats = if (o.has("f") && !o.isNull("f")) o.getInt("f") else null,
+                    carbs = if (o.has("c") && !o.isNull("c")) o.getInt("c") else null
+                )
+            )
+        }
+        return list
+    }
+
+    private fun saveAll(context: Context, list: List<DayTotals>) {
+        val arr = JSONArray()
+        list.forEach { e ->
+            val o = JSONObject()
+            o.put("date", e.dateKey)
+            if (e.weight != null) o.put("w", e.weight.toDouble()) else o.put("w", JSONObject.NULL)
+            if (e.calories != null) o.put("cal", e.calories) else o.put("cal", JSONObject.NULL)
+            if (e.proteins != null) o.put("p", e.proteins) else o.put("p", JSONObject.NULL)
+            if (e.fats != null) o.put("f", e.fats) else o.put("f", JSONObject.NULL)
+            if (e.carbs != null) o.put("c", e.carbs) else o.put("c", JSONObject.NULL)
+            arr.put(o)
+        }
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        p.edit().putString(K_DAYS, arr.toString()).apply()
+    }
+
+    fun upsertDay(
+        context: Context,
+        dateKey: String,
+        weight: Float? = null,
+        calories: Int? = null,
+        proteins: Int? = null,
+        fats: Int? = null,
+        carbs: Int? = null
+    ) {
+        val list = getAll(context)
+        val idx = list.indexOfFirst { it.dateKey == dateKey }
+        if (idx >= 0) {
+            val old = list[idx]
+            list[idx] = DayTotals(
+                dateKey = dateKey,
+                weight = weight ?: old.weight,
+                calories = calories ?: old.calories,
+                proteins = proteins ?: old.proteins,
+                fats = fats ?: old.fats,
+                carbs = carbs ?: old.carbs
+            )
+        } else {
+            list.add(
+                DayTotals(
+                    dateKey = dateKey,
+                    weight = weight,
+                    calories = calories,
+                    proteins = proteins,
+                    fats = fats,
+                    carbs = carbs
+                )
+            )
+        }
+        saveAll(context, list.sortedBy { it.dateKey })
+    }
+
+    fun recordMacrosFromStats(context: Context, cutoffMillis: Long, stats: DayStats) {
+        val key = dateKeyFromCutoff(cutoffMillis)
+        upsertDay(
+            context,
+            dateKey = key,
+            calories = stats.calories,
+            proteins = stats.proteins,
+            fats = stats.fats,
+            carbs = stats.carbs
+        )
+    }
+
+    private fun dateKeyFromCutoff(cutoffMillis: Long): String {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = cutoffMillis - 1_000L
+        return sdfKey().format(Date(cal.timeInMillis))
+    }
+
+    fun seriesLastDays(
+        context: Context,
+        days: Int,
+        includeTodayStats: DayStats?
+    ): List<DayTotals> {
+        val all = getAll(context).toMutableList()
+        if (includeTodayStats != null) {
+            val today = todayKey()
+            val idx = all.indexOfFirst { it.dateKey == today }
+            val d = if (idx >= 0) all[idx] else DayTotals(today)
+            val merged = d.copy(
+                calories = includeTodayStats.calories,
+                proteins = includeTodayStats.proteins,
+                fats = includeTodayStats.fats,
+                carbs = includeTodayStats.carbs
+            )
+            if (idx >= 0) all[idx] = merged else all.add(merged)
+        }
+        val sorted = all.sortedBy { it.dateKey }
+        return if (sorted.size <= days) sorted else sorted.takeLast(days)
+    }
+}
+
+/* ===== Текущая статистика дня и ночной сброс ===== */
+
 object DailyStatsStorage {
     private const val PREFS = "daily_stats"
     private const val K_CAL = "cal"
@@ -241,6 +387,9 @@ object DailyStatsStorage {
     }
 
     fun resetToZero(context: Context, setCutoffTo: Long = mostRecentCutoffMillis()) {
+        val oldStats = get(context)
+        HistoryStorage.recordMacrosFromStats(context, setCutoffTo, oldStats)
+
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         p.edit()
             .putInt(K_CAL, 0)
@@ -460,7 +609,6 @@ fun SelectableCard(
     }
 }
 
-
 @Composable
 fun LanguageSelectionScreen(
     selectedLangCode: String,
@@ -576,7 +724,7 @@ fun KbjuQuestionScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(24.dp)
-                    .padding(top = 180.dp)  // было 100dp — опустил ниже
+                    .padding(top = 180.dp)
                     .padding(bottom = BottomContinueReservedSpace),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top
@@ -603,7 +751,6 @@ fun KbjuQuestionScreen(
         }
     }
 }
-
 
 @Composable
 fun KbjuInputScreen(
@@ -919,6 +1066,8 @@ fun CalcResultScreen(
     }
 }
 
+/* ===== Главная, список, графики, настройки ===== */
+
 @Composable
 fun MainHost(onEditKbju: () -> Unit, onChangeLanguage: () -> Unit) {
     var tab by remember { mutableStateOf(0) }
@@ -955,7 +1104,7 @@ fun MainHost(onEditKbju: () -> Unit, onChangeLanguage: () -> Unit) {
         Box(Modifier.padding(padding)) {
             when (tab) {
                 0 -> HomeDashboard()
-                1 -> ChartsStub()
+                1 -> ChartsScreen()
                 2 -> SettingsRoot(onEditKbju = onEditKbju, onChangeLanguage = onChangeLanguage)
             }
         }
@@ -1357,15 +1506,361 @@ fun SettingTile(title: String, subtitle: String, onClick: () -> Unit) {
     }
 }
 
+/* ====== ЭКРАН ГРАФИКОВ ====== */
+
+enum class Metric { WEIGHT, CAL, PROT, FAT, CARB }
+
 @Composable
-fun ChartsStub() {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color(0xFFFFF8E1)),
-        contentAlignment = Alignment.Center
+fun ChartsScreen() {
+    val ctx = LocalContext.current
+
+    var showAddWeight by remember { mutableStateOf(false) }
+    var weights by remember { mutableStateOf(WeightStorage.getAll(ctx)) }
+
+    val dateFmt = remember { SimpleDateFormat("dd.MM", Locale.getDefault()) }
+
+    val weightPoints = remember(weights) { weights.takeLast(14) } // последние 14 дней
+    val weightValues = remember(weightPoints) { weightPoints.map { it.second } }
+    val weightLabels = remember(weightPoints) { weightPoints.map { dateFmt.format(Date(it.first)) } }
+
+    val today = DailyStatsStorage.get(ctx)
+    val todayLabel = dateFmt.format(Date())
+    val calValues = listOf(today.calories.toFloat())
+    val protValues = listOf(today.proteins.toFloat())
+    val fatValues = listOf(today.fats.toFloat())
+    val carbValues = listOf(today.carbs.toFloat())
+    val singleLabel = listOf(todayLabel)
+
+    Scaffold(
+        containerColor = Color(0xFFFFF8E1),
+        bottomBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFFFF8E1))
+                    .padding(16.dp)
+            ) {
+                Button(
+                    onClick = { showAddWeight = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107))
+                ) {
+                    Text(
+                        text = stringResource(R.string.add_weight),
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
+            }
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .background(Color(0xFFFFF8E1))
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Spacer(Modifier.height(8.dp))
+
+            ChartCard(title = "⚖️  " + stringResource(R.string.charts_title_weight)) {
+                if (weightValues.isEmpty()) {
+                    Text(stringResource(R.string.no_data), color = Color(0xFF5D4037))
+                } else {
+                    LineChart(values = weightValues, xLabels = weightLabels, height = 220.dp, stroke = 3.dp)
+                }
+            }
+
+            ChartCard(title = "🔥  " + stringResource(R.string.charts_title_calories)) {
+                if (calValues.isEmpty()) {
+                    Text(stringResource(R.string.no_data), color = Color(0xFF5D4037))
+                } else {
+                    LineChart(values = calValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp)
+                }
+            }
+
+            ChartCard(title = "🍗  " + stringResource(R.string.charts_title_proteins)) {
+                if (protValues.isEmpty()) {
+                    Text(stringResource(R.string.no_data), color = Color(0xFF5D4037))
+                } else {
+                    LineChart(values = protValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp)
+                }
+            }
+
+            ChartCard(title = "🥑  " + stringResource(R.string.charts_title_fats)) {
+                if (fatValues.isEmpty()) {
+                    Text(stringResource(R.string.no_data), color = Color(0xFF5D4037))
+                } else {
+                    LineChart(values = fatValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp)
+                }
+            }
+
+            ChartCard(title = "🍚  " + stringResource(R.string.charts_title_carbs)) {
+                if (carbValues.isEmpty()) {
+                    Text(stringResource(R.string.no_data), color = Color(0xFF5D4037))
+                } else {
+                    LineChart(values = carbValues, xLabels = singleLabel, height = 180.dp, stroke = 3.dp)
+                }
+            }
+
+            Spacer(Modifier.height(84.dp)) // запас под нижнюю кнопку
+        }
+    }
+
+    if (showAddWeight) {
+        AddWeightSheet(
+            onClose = { showAddWeight = false },
+            onSave = { kg ->
+                WeightStorage.addOrUpdateToday(ctx, kg)
+                weights = WeightStorage.getAll(ctx)
+                showAddWeight = false
+            }
+        )
+    }
+}
+object WeightStorage {
+    private const val PREFS = "weight_stats"
+    private const val KEY = "weights_json"
+
+    fun addOrUpdateToday(context: Context, kg: Float) {
+        val all = getAll(context).toMutableList()
+        val today = todayStartMillis()
+        val idx = all.indexOfFirst { it.first == today }
+        if (idx >= 0) {
+            all[idx] = today to kg
+        } else {
+            all.add(today to kg)
+        }
+        saveAll(context, all)
+    }
+
+    fun getAll(context: Context): List<Pair<Long, Float>> {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val json = p.getString(KEY, "[]") ?: "[]"
+        val arr = JSONArray(json)
+        val out = ArrayList<Pair<Long, Float>>(arr.length())
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            val d = o.optLong("d", 0L)
+            val kg = o.optDouble("kg", 0.0).toFloat()
+            if (d > 0) out.add(d to kg)
+        }
+        return out.sortedBy { it.first }
+    }
+
+    private fun saveAll(context: Context, list: List<Pair<Long, Float>>) {
+        val arr = JSONArray()
+        list.sortedBy { it.first }.forEach {
+            arr.put(JSONObject().apply {
+                put("d", it.first)
+                put("kg", it.second.toDouble())
+            })
+        }
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        p.edit().putString(KEY, arr.toString()).apply()
+    }
+
+    private fun todayStartMillis(): Long {
+        val c = Calendar.getInstance()
+        c.set(Calendar.HOUR_OF_DAY, 0)
+        c.set(Calendar.MINUTE, 0)
+        c.set(Calendar.SECOND, 0)
+        c.set(Calendar.MILLISECOND, 0)
+        return c.timeInMillis
+    }
+}
+
+@Composable
+fun ChartCard(
+    title: String,
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .shadow(1.dp, RoundedCornerShape(16.dp))
+            .background(Color(0xFFFFF3E0), RoundedCornerShape(16.dp))
+            .padding(16.dp)
+            .fillMaxWidth()
     ) {
-        Text(stringResource(R.string.charts_stub), color = Color(0xFF3E2723), fontSize = 18.sp)
+        Text(title, fontWeight = FontWeight.Bold, color = Color(0xFF3E2723))
+        Spacer(Modifier.height(8.dp))
+        content()
+    }
+}
+
+@Composable
+fun LineChart(
+    values: List<Float>,
+    xLabels: List<String>,
+    height: Dp,
+    stroke: Dp
+) {
+    if (values.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(height),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(stringResource(R.string.no_data), color = Color(0xFF5D4037))
+        }
+        return
+    }
+
+    val minV = values.minOrNull() ?: 0f
+    val maxV = values.maxOrNull() ?: 0f
+    val pad = ((maxV - minV).takeIf { it > 0f } ?: 1f) * 0.1f
+    val vMin = minV - pad
+    val vMax = maxV + pad
+
+    Column(Modifier.fillMaxWidth()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(height)
+        ) {
+            val w = size.width
+            val h = size.height
+            val gridColor = Color(0xFFFFE0B2)
+            val strokePx = stroke.toPx()
+
+            val gridLines = 4
+            for (i in 0..gridLines) {
+                val y = h * (i / gridLines.toFloat())
+                drawLine(
+                    color = gridColor,
+                    start = androidx.compose.ui.geometry.Offset(0f, y),
+                    end = androidx.compose.ui.geometry.Offset(w, y),
+                    strokeWidth = 1.dp.toPx()
+                )
+            }
+
+            if (values.size == 1) {
+                val yRatio = if ((vMax - vMin) == 0f) 0.5f else (values[0] - vMin) / (vMax - vMin)
+                val y = h * (1f - yRatio)
+                drawLine(
+                    color = Color(0xFFFFA000),
+                    start = androidx.compose.ui.geometry.Offset(0f, y),
+                    end = androidx.compose.ui.geometry.Offset(w, y),
+                    strokeWidth = strokePx,
+                    cap = StrokeCap.Round
+                )
+            } else {
+                var prev: androidx.compose.ui.geometry.Offset? = null
+                values.forEachIndexed { i, v ->
+                    val x = i / (values.lastIndex.toFloat()) * w
+                    val yRatio = if ((vMax - vMin) == 0f) 0.5f else (v - vMin) / (vMax - vMin)
+                    val y = h * (1f - yRatio)
+                    val pt = androidx.compose.ui.geometry.Offset(x, y)
+                    if (prev != null) {
+                        drawLine(
+                            color = Color(0xFFFFA000),
+                            start = prev!!,
+                            end = pt,
+                            strokeWidth = strokePx,
+                            cap = StrokeCap.Round
+                        )
+                    }
+                    prev = pt
+                }
+                values.forEachIndexed { i, v ->
+                    val x = i / (values.lastIndex.toFloat()) * w
+                    val yRatio = if ((vMax - vMin) == 0f) 0.5f else (v - vMin) / (vMax - vMin)
+                    val y = h * (1f - yRatio)
+                    drawCircle(
+                        color = Color(0xFFFFC107),
+                        radius = strokePx * 1.1f,
+                        center = androidx.compose.ui.geometry.Offset(x, y)
+                    )
+                }
+            }
+        }
+
+        if (xLabels.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                xLabels.forEach { lbl ->
+                    Text(lbl, color = Color(0xFF5D4037), fontSize = 10.sp)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddWeightSheet(
+    onClose: () -> Unit,
+    onSave: (kg: Float) -> Unit
+) {
+    var kgText by remember { mutableStateOf("") }
+    val onlyNum: (String) -> String = { s ->
+        buildString {
+            var dotUsed = false
+            s.forEach { ch ->
+                if (ch.isDigit()) append(ch)
+                else if ((ch == '.' || ch == ',') && !dotUsed) {
+                    append('.'); dotUsed = true
+                }
+            }
+        }
+    }
+    val valid = kgText.toFloatOrNull()?.let { it > 0f && it < 500f } == true
+
+    ModalBottomSheet(
+        onDismissRequest = onClose,
+        containerColor = Color(0xFFFFF8E1)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = stringResource(R.string.add_weight),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF3E2723)
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = kgText,
+                onValueChange = { kgText = onlyNum(it) },
+                label = { Text(stringResource(R.string.weight_kg)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = onClose,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text(stringResource(R.string.button_cancel)) }
+                Button(
+                    onClick = {
+                        val v = kgText.toFloatOrNull() ?: 0f
+                        if (v > 0f) onSave(v)
+                    },
+                    enabled = valid,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFC107))
+                ) { Text(stringResource(R.string.button_save), color = Color.Black, fontWeight = FontWeight.Bold) }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
     }
 }
 
@@ -1637,6 +2132,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+/* ===== Preview ===== */
 
 @Preview(showBackground = true)
 @Composable
